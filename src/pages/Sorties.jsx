@@ -532,7 +532,7 @@ export default function Sorties() {
       ) : (
         <div className="overflow-x-auto">
           {/* Augmenté la largeur minimale pour accueillir toutes les colonnes */}
-          <div className="min-w-[1700px] table-container">
+          <div className="min-w-[1200px] table-container">
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
