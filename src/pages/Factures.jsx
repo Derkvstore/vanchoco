@@ -452,7 +452,7 @@ export default function Factures() {
     }
   };
 
-  // Ceci est la déclaration principale, l'autre sera supprimée
+  // Logique pour désactiver le bouton de confirmation de création de facture
   const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) ||
     invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0) ||
     (negotiatedPrice && isNaN(parseFloat(negotiatedPrice)));
