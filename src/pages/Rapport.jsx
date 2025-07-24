@@ -25,12 +25,16 @@ export default function Rapport() {
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
   const [searchTerm, setSearchTerm] = useState('');
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const getFormattedDate = () => {
-    const today = new Date();
-    const day = String(today.getDate()).padStart(2, '0');
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const year = today.getFullYear();
-    return `${day}-${month}-${year}`;
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date().toLocaleDateString('fr-FR', options);
   };
 
   const formatAmount = (amount) => {
@@ -45,7 +49,9 @@ export default function Rapport() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const response = await axios.get('http://localhost:3001/api/reports/stock-summary');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/reports/stock-summary`);
+      // --- FIN DE LA MODIFICATION ---
       setStockSummary(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement du résumé du stock:', error);
@@ -57,8 +63,9 @@ export default function Rapport() {
 
   const fetchDailyStats = async () => {
     try {
-      // CORRECTION DE L'URL ICI : Changement de /api/ventes/reports/dashboard-stats à /api/reports/dashboard-stats
-      const response = await axios.get('http://localhost:3001/api/reports/dashboard-stats');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/reports/dashboard-stats`);
+      // --- FIN DE LA MODIFICATION ---
       if (response.status !== 200) {
         throw new Error(response.data.error || 'Échec de la récupération des statistiques journalières.');
       }
@@ -321,5 +328,4 @@ export default function Rapport() {
         </div>
       )}
     </div>
-  );
-}
+  )}
