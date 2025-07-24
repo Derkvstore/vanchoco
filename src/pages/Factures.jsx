@@ -81,6 +81,7 @@ export default function Factures() {
   const { subtotal: total, balance } = calculateOverallTotals();
 
   // Dépendances pour le calcul du montant dû dans la modale de paiement
+  // Ceci est la déclaration principale, l'autre sera supprimée
   const currentPaymentModalBalanceDue = currentFacture && newPaymentTotal !== '' && paymentAmount !== ''
     ? parseFloat(newPaymentTotal) - parseFloat(paymentAmount)
     : (currentFacture ? (currentFacture.montant_original_facture - currentFacture.montant_paye_facture) : 0);
@@ -186,14 +187,14 @@ export default function Factures() {
           return {
             ...row,
             selectedProduct: foundProduct || null,
-            productSearchTerm: value,
-            unitPrice: selectedProduct ? selectedProduct.prix_vente : '',
-            purchasePrice: selectedProduct ? selectedProduct.prix_achat : 0, // Stocke le prix d'achat
+            productSearchTerm: selectedValue, // Utilise selectedValue ici
+            unitPrice: foundProduct ? foundProduct.prix_vente : '',
+            purchasePrice: foundProduct ? foundProduct.prix_achat : 0, // Stocke le prix d'achat
             imeiInput: '',
             imeiList: [],
             quantity: 0,
             totalPrice: 0,
-            validationError: selectedProduct ? '' : 'Produit non valide ou non trouvé.'
+            validationError: foundProduct ? '' : 'Produit non valide ou non trouvé.'
           };
         }
         return row;
@@ -371,7 +372,8 @@ export default function Factures() {
     console.log("4. Validation de toutes les lignes de facture passée.");
 
 
-    const { total: finalTotal, paid: finalPaid } = calculateOverallTotals();
+    const { finalTotal } = calculateOverallTotals(); // Renommé 'total' en 'finalTotal' pour éviter la confusion
+    const finalPaid = parseFloat(newInvoicePayment); // Renommé 'paid' en 'finalPaid'
     console.log("5. Totaux calculés:", { finalTotal, finalPaid });
 
     if (isNaN(finalPaid) || finalPaid < 0) {
@@ -450,6 +452,7 @@ export default function Factures() {
     }
   };
 
+  // Ceci est la déclaration principale, l'autre sera supprimée
   const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) ||
     invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0) ||
     (negotiatedPrice && isNaN(parseFloat(negotiatedPrice)));
@@ -496,10 +499,8 @@ export default function Factures() {
     }
   };
 
-  // Calcul du montant dû actuel dans la modale de paiement
-  const currentPaymentModalBalanceDue = currentFacture
-    ? (parseFloat(newPaymentTotal || 0) - parseFloat(paymentAmount || 0))
-    : 0;
+  // La variable currentPaymentModalBalanceDue est déjà déclarée plus haut.
+  // Suppression de la déclaration dupliquée ici.
 
   const handleOpenCancelModal = (facture) => {
     if (!facture || !facture.facture_id) {
@@ -624,10 +625,8 @@ export default function Factures() {
     );
   });
 
-  // Logique pour désactiver le bouton de confirmation de création de facture
-  const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) || invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0);
-  console.log("État du bouton Confirmer Facture (disabled):", isConfirmButtonDisabled);
-
+  // La variable isConfirmButtonDisabled est déjà déclarée plus haut.
+  // Suppression de la déclaration dupliquée ici.
 
   return (
     <div className="p-4 max-w-full mx-auto font-sans bg-gray-50 rounded-xl shadow border border-gray-200">
