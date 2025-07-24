@@ -17,7 +17,7 @@ export default function Sorties() {
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
   const [searchTerm, setSearchTerm] = useState('');
-
+ 
   // États pour la modale de modification de paiement
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentSaleToEdit, setCurrentSaleToEdit] = useState(null);
@@ -35,7 +35,12 @@ export default function Sorties() {
 
   const textareaRef = useRef(null);
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
@@ -467,7 +472,8 @@ export default function Sorties() {
           .no-print, .print-hidden { display: none !important; }
           #vite-error-overlay, #react-devtools-content { display: none !important; }
           .overflow-x-auto { overflow-x: visible !important; }
-          .min-w-\\[1200px\\] { min-width: unset !important; }
+          /* Ajusté pour correspondre à la largeur minimale du tableau */
+          .min-w-\\[1700px\\] { min-width: unset !important; }
           table { width: 100% !important; border-collapse: collapse; }
           th, td { border: 1px solid #ddd; padding: 8px; font-size: 9pt; white-space: normal; }
           body { font-size: 10pt; }
@@ -525,18 +531,19 @@ export default function Sorties() {
         <p className="text-gray-500 text-center text-sm">Aucune vente trouvée correspondant à votre recherche.</p>
       ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[1500px] table-container"> {/* Augmenté la largeur minimale */}
+          {/* Augmenté la largeur minimale pour accueillir toutes les colonnes */}
+          <div className="min-w-[1700px] table-container">
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
                   <th className="px-3 py-2 font-medium w-[4%]">ID Vente</th>
                   <th className="px-3 py-2 font-medium w-[9%]">Date Vente</th>
                   <th className="px-3 py-2 font-medium w-[9%]">Client</th>
-                  <th className="px-3 py-2 font-medium w-[8%]">Marque</th> {/* Séparé */}
-                  <th className="px-3 py-2 font-medium w-[8%]">Modèle</th> {/* Séparé */}
-                  <th className="px-3 py-2 font-medium w-[6%]">Type</th> {/* Séparé */}
-                  <th className="px-3 py-2 font-medium w-[6%]">Type Carton</th> {/* Séparé */}
-                  <th className="px-3 py-2 font-medium w-[6%]">Stockage</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[7%]">Marque</th>
+                  <th className="px-3 py-2 font-medium w-[7%]">Modèle</th>
+                  <th className="px-3 py-2 font-medium w-[6%]">Type</th>
+                  <th className="px-3 py-2 font-medium w-[6%]">Type Carton</th>
+                  <th className="px-3 py-2 font-medium w-[6%]">Stockage</th>
                   <th className="px-3 py-2 font-medium w-[7%]">IMEI</th>
                   <th className="px-3 py-2 font-medium text-right w-[4%]">Qté</th>
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Prix Unit.</th>
@@ -544,7 +551,7 @@ export default function Sorties() {
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Montant Payé</th>
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Reste à Payer</th>
                   <th className="px-3 py-2 font-medium text-center w-[7%]">Statut Article</th>
-                  <th className="px-3 py-2 text-right no-print w-[8%]">Actions</th> {/* Aligné à droite */}
+                  <th className="px-3 py-2 text-right no-print w-[8%]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -616,7 +623,7 @@ export default function Sorties() {
                           }
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right space-x-1 no-print"> {/* Aligné à droite */}
+                      <td className="px-3 py-2 text-right space-x-1 no-print">
                         {/* Bouton Modifier Paiement (visible si la vente n'est pas intégralement payée ou annulée ET si ce n'est PAS un article de facture spéciale) */}
                         {!data.is_special_sale_item && data.statut_paiement_vente !== 'payee_integralement' && data.statut_paiement_vente !== 'annulee' && data.statut_vente === 'actif' && (
                           <button
