@@ -21,6 +21,13 @@ export default function RetoursMobiles() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [selectedMobiles, setSelectedMobiles] = useState([]); // Nouveau: pour stocker les IDs des mobiles sélectionnés
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
     setOnConfirmAction(() => action);
@@ -39,7 +46,9 @@ export default function RetoursMobiles() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const response = await fetch('http://localhost:3001/api/returns');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const response = await fetch(`${API_BASE_URL}/api/returns`);
+      // --- FIN DE LA MODIFICATION ---
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Échec de la récupération des mobiles retournés.');
@@ -102,7 +111,9 @@ export default function RetoursMobiles() {
         setIsConfirming(true);
         try {
           // Envoyer un tableau d'IDs au backend
-          const res = await fetch('http://localhost:3001/api/returns/send-to-supplier-batch', { // Nouvelle route ou modification de l'existante
+          // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+          const res = await fetch(`${API_BASE_URL}/api/returns/send-to-supplier-batch`, { // Nouvelle route ou modification de l'existante
+          // --- FIN DE LA MODIFICATION ---
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ return_ids: mobilesToSend.map(m => m.return_id) }),

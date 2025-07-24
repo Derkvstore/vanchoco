@@ -1,4 +1,3 @@
-// src/pages/Products.jsx 
 import React, { useState, useEffect } from 'react';
 import {
   CubeIcon,
@@ -58,6 +57,13 @@ export default function Products() {
   const [confirmModalContent, setConfirmModalContent] = useState({ title: "", message: "" });
   const [onConfirmAction, setOnConfirmAction] = useState(null);
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
     setOnConfirmAction(() => action);
@@ -86,7 +92,9 @@ export default function Products() {
     setLoading(true);
     setFormError("");
     setSuccessMessage("");
-    fetch("http://localhost:3001/api/products")
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+    fetch(`${API_BASE_URL}/api/products`)
+    // --- FIN DE LA MODIFICATION ---
       .then((res) => {
         if (!res.ok) {
           throw new Error("Erreur réseau lors de la récupération des produits.");
@@ -107,7 +115,9 @@ export default function Products() {
   };
 
   const fetchFournisseurs = () => {
-    fetch("http://localhost:3001/api/fournisseurs")
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+    fetch(`${API_BASE_URL}/api/fournisseurs`)
+    // --- FIN DE LA MODIFICATION ---
       .then((res) => {
         if (!res.ok) {
           return res.json().then(err => { throw new Error(err.error || "Erreur réseau inconnue lors de la récupération des fournisseurs."); });
@@ -220,22 +230,23 @@ export default function Products() {
         return;
       }
       dataToSend.quantite = parsedQuantite;
-      url = `http://localhost:3001/api/products/${editingId}`;
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
+      url = `${API_BASE_URL}/api/products/${editingId}`;
+      // --- FIN DE LA MODIFICATION ---
       method = "PUT";
     } else {
-      const imeiInput = form.imei;
-      const imeiList = imeiInput
+      const imeiInput = form.imei
         .split(/[\n,]/)
         .map((imei) => imei.trim())
         .filter((imei) => imei !== "");
 
-      if (imeiList.length === 0) {
+      if (imeiInput.length === 0) {
         setFormError("Veuillez entrer au moins un IMEI.");
         setIsSubmitting(false);
         return;
       }
 
-      for (const imei of imeiList) {
+      for (const imei of imeiInput) {
         if (!/^\d{6}$/.test(imei)) {
           setFormError(`IMEI invalide : "${imei}". Chaque IMEI doit contenir exactement 6 chiffres.`);
           setIsSubmitting(false);
@@ -245,13 +256,15 @@ export default function Products() {
 
       dataToSend = {
         ...form,
-        imei: imeiList,
+        imei: imeiInput, // Utilisez imeiInput qui est un tableau
         prix_vente: parsedPrixVente,
         prix_achat: parsedPrixAchat,
         fournisseur_id: parseInt(form.fournisseur_id, 10),
       };
       delete dataToSend.quantite;
-      url = "http://localhost:3001/api/products/batch";
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
+      url = `${API_BASE_URL}/api/products/batch`;
+      // --- FIN DE LA MODIFICATION ---
       method = "POST";
     }
 
@@ -300,7 +313,9 @@ export default function Products() {
       "Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible et ne peut être effectuée que si le produit n'est lié à aucune vente.",
       async () => {
         try {
-          const res = await fetch(`http://localhost:3001/api/products/${id}`, {
+          // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+          const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+          // --- FIN DE LA MODIFICATION ---
             method: "DELETE",
           });
           if (res.ok) {

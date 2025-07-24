@@ -35,7 +35,12 @@ export default function Sorties() {
 
   const textareaRef = useRef(null);
 
-  const API_URL = 'http://localhost:3001'; // Définition directe pour cet environnement
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
@@ -74,7 +79,9 @@ export default function Sorties() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const ventesRes = await fetch(`${API_URL}/api/ventes`);
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const ventesRes = await fetch(`${API_BASE_URL}/api/ventes`);
+      // --- FIN DE LA MODIFICATION ---
       if (!ventesRes.ok) {
         const errorData = await ventesRes.json();
         throw new Error(errorData.error || 'Échec de la récupération des ventes.');
@@ -195,7 +202,9 @@ export default function Sorties() {
         payload.new_total_amount = parseInt(parsedNewTotalAmountNegotiated, 10);
       }
 
-      const res = await fetch(`${API_URL}/api/ventes/${currentSaleToEdit.id}/update-payment`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const res = await fetch(`${API_BASE_URL}/api/ventes/${currentSaleToEdit.id}/update-payment`, {
+      // --- FIN DE LA MODIFICATION ---
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -225,7 +234,9 @@ export default function Sorties() {
       async (currentReason) => {
         setIsConfirming(true);
         try {
-          const res = await fetch(`${API_URL}/api/ventes/cancel-item`, {
+          // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+          const res = await fetch(`${API_BASE_URL}/api/ventes/cancel-item`, {
+          // --- FIN DE LA MODIFICATION ---
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -268,7 +279,9 @@ export default function Sorties() {
       }
       setIsConfirming(true);
       try {
-        const res = await fetch(`${API_URL}/api/ventes/return-item`, {
+        // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+        const res = await fetch(`${API_BASE_URL}/api/ventes/return-item`, {
+        // --- FIN DE LA MODIFICATION ---
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -363,7 +376,9 @@ export default function Sorties() {
       }
       setIsConfirming(true);
       try {
-        const res = await fetch(`${API_URL}/api/ventes/mark-as-rendu`, {
+        // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+        const res = await fetch(`${API_BASE_URL}/api/ventes/mark-as-rendu`, {
+        // --- FIN DE LA MODIFICATION ---
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -448,43 +463,28 @@ export default function Sorties() {
   };
 
   return (
-    <div className="p-4 max-w-full mx-auto font-sans bg-gray-50 rounded-xl shadow border border-gray-200">
+    <div id="printableContent" className="p-4 max-w-full mx-auto font-sans bg-gray-50 rounded-xl shadow border border-gray-200">
       <style>
         {`
         @media print {
-          .no-print {
-            display: none !important;
-          }
-          .overflow-x-auto {
-            overflow-x: visible !important;
-          }
-          /* Supprime min-width pour l'impression aussi si ce n'est pas souhaité */
-          .table-container { 
-            min-width: unset !important;
-          }
-          table {
-            width: 100% !important;
-            border-collapse: collapse;
-          }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            font-size: 9pt;
-            white-space: normal; /* Permet le retour à la ligne pour l'impression */
-          }
-          body {
-            font-size: 10pt;
-          }
-          h2 {
-            font-size: 14pt;
-          }
+          body * { visibility: hidden; }
+          #printableContent, #printableContent * { visibility: visible; }
+          #printableContent { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: none; box-shadow: none; border: none; }
+          .no-print, .print-hidden { display: none !important; }
+          #vite-error-overlay, #react-devtools-content { display: none !important; }
+          .overflow-x-auto { overflow-x: visible !important; }
+          .min-w-\\[1200px\\] { min-width: unset !important; }
+          table { width: 100% !important; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; font-size: 9pt; white-space: normal; }
+          body { font-size: 10pt; }
+          .print-header { display: block !important; text-align: center; margin-bottom: 20px; font-size: 18pt; font-weight: bold; color: #333; }
         }
         `}
       </style>
 
-      <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center flex items-center justify-center">
-        <ShoppingCartIcon className="h-6 w-6 text-gray-600 mr-2" />
-        Historique des Ventes
+      <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center flex items-center justify-center print-header">
+        <ShoppingCartIcon className="h-6 w-6 text-gray-600 mr-2 print-hidden" />
+        Historique des Sorties
       </h2>
 
       {statusMessage.text && (
@@ -521,12 +521,12 @@ export default function Sorties() {
           className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200 font-medium"
         >
           <PrinterIcon className="h-5 w-5 mr-2" />
-          Imprimer la liste
+          Imprimer l'historique
         </button>
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-center text-sm">Chargement des ventes...</p>
+        <p className="text-gray-500 text-center text-sm">Chargement de l'historique des ventes...</p>
       ) : filteredVentes.length === 0 ? (
         <p className="text-gray-500 text-center text-sm">Aucune vente trouvée correspondant à votre recherche.</p>
       ) : (
@@ -538,11 +538,8 @@ export default function Sorties() {
                   <th className="px-3 py-2 font-medium">ID Vente</th>
                   <th className="px-3 py-2 font-medium">Date Vente</th>
                   <th className="px-3 py-2 font-medium">Client</th>
-                  <th className="px-3 py-2 font-medium">Marque</th>
-                  <th className="px-3 py-2 font-medium">Modèle</th>
-                  <th className="px-3 py-2 font-medium">Type</th>
-                  <th className="px-3 py-2 font-medium">Type Carton</th>
-                  <th className="px-3 py-2 font-medium">Stockage</th>
+                  <th className="px-3 py-2 font-medium">Téléphone</th>
+                  <th className="px-3 py-2 font-medium">Article</th>
                   <th className="px-3 py-2 font-medium">IMEI</th>
                   <th className="px-3 py-2 font-medium text-right">Qté</th>
                   <th className="px-3 py-2 font-medium text-right">Prix Unit.</th>
@@ -575,14 +572,8 @@ export default function Sorties() {
                         <div className="max-w-[100px] truncate" title={data.client_nom}>{data.client_nom}</div>
                       </td>
                       <td className="px-3 py-2 text-gray-700">
-                        <div className="max-w-[80px] truncate" title={data.marque}>{data.marque}</div>
+                        {data.marque} {data.modele}
                       </td>
-                      <td className="px-3 py-2 text-gray-700">
-                        <div className="max-w-[100px] truncate" title={data.modele}>{data.modele}</div>
-                      </td>
-                      <td className="px-3 py-2 text-gray-700">{data.type || '—'}</td>
-                      <td className="px-3 py-2 text-gray-700">{data.type_carton || '—'}</td>
-                      <td className="px-3 py-2 text-gray-700">{data.stockage || '—'}</td>
                       <td className="px-3 py-2 text-gray-700">{data.imei}</td>
                       <td className="px-3 py-2 text-right text-gray-700">{data.quantite_vendue}</td>
                       {/* Appliquer formatCFA aux colonnes monétaires */}

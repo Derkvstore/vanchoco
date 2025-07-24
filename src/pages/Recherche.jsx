@@ -1,4 +1,3 @@
-// frontend/src/components/Recherche.jsx
 import React, { useState, useEffect } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, CubeIcon } from '@heroicons/react/24/outline'; // Ajout de CubeIcon
 
@@ -9,6 +8,13 @@ export default function Recherche() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -24,7 +30,9 @@ export default function Recherche() {
     setFilteredProducts([]);
 
     try {
-      const response = await fetch('http://localhost:3001/api/products'); 
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const response = await fetch(`${API_BASE_URL}/api/products`); 
+      // --- FIN DE LA MODIFICATION ---
       if (!response.ok) {
         throw new Error('Échec de la récupération des produits.');
       }

@@ -14,6 +14,13 @@ export default function Liste() {
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' }); // { type: 'success' | 'error', text: '' }
   const [searchTerm, setSearchTerm] = useState('');
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   // Obtenir la date du jour formatée
   const getFormattedDate = () => {
     const today = new Date();
@@ -40,7 +47,9 @@ export default function Liste() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const ventesRes = await fetch('http://localhost:3001/api/ventes');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const ventesRes = await fetch(`${API_BASE_URL}/api/ventes`);
+      // --- FIN DE LA MODIFICATION ---
       if (!ventesRes.ok) {
         const errorData = await ventesRes.json();
         throw new Error(errorData.error || 'Échec de la récupération des ventes.');
@@ -287,5 +296,4 @@ export default function Liste() {
         </div>
       )}
     </div>
-  );
-}
+  )}

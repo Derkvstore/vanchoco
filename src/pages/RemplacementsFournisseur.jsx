@@ -1,4 +1,3 @@
-// frontend/src/components/RemplacementsFournisseur.jsx
 import React, { useState, useEffect } from 'react';
 import {
   TruckIcon,
@@ -26,11 +25,20 @@ export default function RemplacementsFournisseur() {
   const [receiveModalError, setReceiveModalError] = useState('');
   const [isReceiving, setIsReceiving] = useState(false);
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const fetchReplacedMobiles = async () => {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const response = await fetch('http://localhost:3001/api/remplacements');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const response = await fetch(`${API_BASE_URL}/api/remplacements`);
+      // --- FIN DE LA MODIFICATION ---
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Échec de la récupération des mobiles remplacés.');
@@ -107,7 +115,9 @@ export default function RemplacementsFournisseur() {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/remplacements/receive-from-supplier', {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const res = await fetch(`${API_BASE_URL}/api/remplacements/receive-from-supplier`, {
+      // --- FIN DE LA MODIFICATION ---
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

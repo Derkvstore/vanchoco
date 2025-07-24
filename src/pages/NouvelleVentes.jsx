@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { PlusIcon, TrashIcon, ShoppingCartIcon, CheckCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'; // Ajout d'icônes
+import {
+  ShoppingCartIcon,
+  MagnifyingGlassIcon,
+  PrinterIcon, // Pour le bouton d'impression
+  CheckCircleIcon, // Pour les messages de succès
+  XCircleIcon, // Pour les messages d'erreur
+  XMarkIcon, // Pour fermer les messages
+  PlusIcon, // Pour les ajouts
+  TrashIcon // Pour les suppressions d'articles
+} from '@heroicons/react/24/outline';
 
 export default function NouvelleVente() {
   const [clients, setClients] = useState([]);
@@ -14,6 +23,13 @@ export default function NouvelleVente() {
   });
   const [isMontantPayeEditable, setIsMontantPayeEditable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // Nouvel état pour la soumission
+
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   // Helper function to format currency
   const formatCFA = (amount) => {
@@ -33,7 +49,9 @@ export default function NouvelleVente() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' }); // Réinitialiser les messages
     try {
-      const clientsRes = await fetch('http://localhost:3001/api/clients');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const clientsRes = await fetch(`${API_BASE_URL}/api/clients`);
+      // --- FIN DE LA MODIFICATION ---
       if (!clientsRes.ok) {
         const errorData = await clientsRes.json();
         throw new Error(errorData.error || 'Échec de la récupération des clients.');
@@ -41,7 +59,9 @@ export default function NouvelleVente() {
       const clientsData = await clientsRes.json();
       setClients(clientsData);
 
-      const productsRes = await fetch('http://localhost:3001/api/products');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const productsRes = await fetch(`${API_BASE_URL}/api/products`);
+      // --- FIN DE LA MODIFICATION ---
       if (!productsRes.ok) {
         const errorData = await productsRes.json();
         throw new Error(errorData.error || 'Échec de la récupération des produits.');
@@ -192,7 +212,9 @@ export default function NouvelleVente() {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/ventes', {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const res = await fetch(`${API_BASE_URL}/api/ventes`, {
+      // --- FIN DE LA MODIFICATION ---
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
