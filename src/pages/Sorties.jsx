@@ -551,7 +551,7 @@ export default function Sorties() {
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Montant Payé</th>
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Reste à Payer</th>
                   <th className="px-3 py-2 font-medium text-center w-[7%]">Statut Article</th>
-                  <th className="px-3 py-2 text-right no-print w-[8%]">Actions</th>
+                  <th className="px-3 py-2 text-right no-print w-[8%]">Actions</th> {/* Corrigé de font-center à text-right */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -736,7 +736,7 @@ export default function Sorties() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full relative z-[60] pointer-events-auto">
             <h3 className="text-lg font-bold text-gray-900 mb-4">{confirmModalContent.title}</h3>
             {typeof confirmModalContent.message === 'string' ? (
-              <p className="text-gray-700 mb-6">{confirmModalContent.message}</p>
+              <p className className="text-gray-700 mb-6">{confirmModalContent.message}</p>
             ) : (
               <div className="text-gray-700 mb-6">{confirmModalContent.message}</div>
             )}
