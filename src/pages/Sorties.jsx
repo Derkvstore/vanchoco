@@ -35,12 +35,7 @@ export default function Sorties() {
 
   const textareaRef = useRef(null);
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
-  // Cette variable est injectée par Vite et Render.
-  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
-  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
 
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
@@ -79,9 +74,7 @@ export default function Sorties() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
       const ventesRes = await fetch(`${API_BASE_URL}/api/ventes`);
-      // --- FIN DE LA MODIFICATION ---
       if (!ventesRes.ok) {
         const errorData = await ventesRes.json();
         throw new Error(errorData.error || 'Échec de la récupération des ventes.');
@@ -103,41 +96,73 @@ export default function Sorties() {
   // Aplatir les données de vente pour l'affichage dans le tableau
   // Inclure TOUS les articles de la vente, quel que soit leur statut
   const flattenedVentes = ventes.flatMap(vente => {
-    const resteAPayerVente = parseFloat(vente.montant_total) - parseFloat(vente.montant_paye);
-
     // Calculer le prix d'achat total pour cette vente spécifique
     const totalPrixAchatVente = (vente.articles || []).reduce((sum, item) => {
-      // S'assurer que prix_unitaire_achat est un nombre
       const qty = parseFloat(item.quantite_vendue) || 0;
-      const prixAchat = parseFloat(item.prix_unitaire_achat) || 0; // Utilisation de prix_unitaire_achat
+      const prixAchat = parseFloat(item.prix_unitaire_achat) || 0;
       return sum + (qty * prixAchat);
     }, 0);
 
-    return (vente.articles || []).map(item => ({
-      vente_id: vente.vente_id,
-      date_vente: vente.date_vente,
-      client_nom: vente.client_nom,
-      client_telephone: vente.client_telephone || 'N/A',
-      montant_total_vente: vente.montant_total,
-      montant_paye_vente: vente.montant_paye,
-      reste_a_payer_vente: resteAPayerVente,
-      statut_paiement_vente: vente.statut_paiement,
-      marque: item.marque,
-      modele: item.modele,
-      stockage: item.stockage,
-      imei: item.imei,
-      type_carton: item.type_carton,
-      type: item.type,
-      quantite_vendue: item.quantite_vendue,
-      prix_unitaire_vente: item.prix_unitaire_vente,
-      item_id: item.item_id,
-      produit_id: item.produit_id,
-      statut_vente: item.statut_vente, // Le statut réel de l'article sera affiché
-      is_special_sale_item: item.is_special_sale_item, // Utiliser cette propriété pour le conditionnement des boutons
-      source_achat_id: item.source_achat_id,
-      prix_unitaire_achat: item.prix_unitaire_achat, // Assurez-vous que ceci est inclus si nécessaire pour d'autres logiques
-      total_prix_achat_de_la_vente: totalPrixAchatVente, // AJOUTÉ : Prix d'achat total de la vente
-    }));
+    return (vente.articles || []).map(item => {
+      let resteAPayerItem = 0;
+      // Si l'article est actif, calculer son reste à payer proportionnellement
+      if (item.statut_vente === 'actif') {
+        const totalVente = parseFloat(vente.montant_total) || 0;
+        const montantPayeVente = parseFloat(vente.montant_paye) || 0;
+        const prixUnitaireVente = parseFloat(item.prix_unitaire_vente) || 0;
+        const quantiteVendue = parseFloat(item.quantite_vendue) || 0;
+
+        // Calcul de la contribution de cet article au total original de la vente
+        const itemContributionToOriginalTotal = prixUnitaireVente * quantiteVendue;
+
+        // Calcul du total original de la vente (somme des prix unitaires * quantités de tous les articles)
+        // Ceci est nécessaire pour répartir le montant payé et le montant total négocié proportionnellement
+        const totalOriginalSaleValue = (vente.articles || []).reduce((sum, art) => sum + (parseFloat(art.prix_unitaire_vente) || 0) * (parseFloat(art.quantite_vendue) || 0), 0);
+
+        if (totalOriginalSaleValue > 0) {
+          // Proportion de cet article dans le montant total négocié
+          const itemProportionOfNegotiatedTotal = (itemContributionToOriginalTotal / totalOriginalSaleValue) * totalVente;
+          // Proportion de cet article dans le montant payé
+          const itemProportionOfPaidAmount = (itemContributionToOriginalTotal / totalOriginalSaleValue) * montantPayeVente;
+
+          resteAPayerItem = itemProportionOfNegotiatedTotal - itemProportionOfPaidAmount;
+        } else {
+          // Si totalOriginalSaleValue est 0, et que l'article a un prix, cela indique une anomalie
+          // On peut considérer que le reste à payer est le prix de l'article s'il n'y a pas de total de vente
+          resteAPayerItem = prixUnitaireVente * quantiteVendue;
+        }
+      } else {
+        // Si l'article n'est pas actif (annulé, retourné, etc.), son reste à payer est 0
+        resteAPayerItem = 0;
+      }
+
+
+      return {
+        vente_id: vente.vente_id,
+        date_vente: vente.date_vente,
+        client_nom: vente.client_nom,
+        client_telephone: vente.client_telephone || 'N/A',
+        montant_total_vente: vente.montant_total,
+        montant_paye_vente: vente.montant_paye,
+        reste_a_payer_vente: resteAPayerItem, // Utilise le reste à payer calculé par article
+        statut_paiement_vente: vente.statut_paiement,
+        marque: item.marque,
+        modele: item.modele,
+        stockage: item.stockage,
+        imei: item.imei,
+        type_carton: item.type_carton,
+        type: item.type,
+        quantite_vendue: item.quantite_vendue,
+        prix_unitaire_vente: item.prix_unitaire_vente,
+        item_id: item.item_id,
+        produit_id: item.produit_id,
+        statut_vente: item.statut_vente, // Le statut réel de l'article sera affiché
+        is_special_sale_item: item.is_special_sale_item,
+        source_achat_id: item.source_achat_id,
+        prix_unitaire_achat: item.prix_unitaire_achat,
+        total_prix_achat_de_la_vente: totalPrixAchatVente,
+      };
+    });
   });
 
   // Filtrer les ventes aplaties selon les critères définis par l'utilisateur
@@ -158,7 +183,7 @@ export default function Sorties() {
       id: saleId,
       montant_paye: currentMontantPaye,
       montant_total: montantTotal,
-      total_prix_achat_de_la_vente: totalPrixAchatDeLaVente // CORRIGÉ : Utilise le nom de variable correct
+      total_prix_achat_de_la_vente: totalPrixAchatDeLaVente
     });
     setNewMontantPaye(String(Math.round(currentMontantPaye)));
     setNewTotalAmountNegotiated(String(Math.round(montantTotal)));
@@ -168,7 +193,7 @@ export default function Sorties() {
   const handleConfirmUpdatePayment = async () => {
     const parsedNewMontantPaye = parseFloat(newMontantPaye);
     const parsedNewTotalAmountNegotiated = parseFloat(newTotalAmountNegotiated);
-    const totalPrixAchatDeLaVente = currentSaleToEdit.total_prix_achat_de_la_vente; // RÉCUPÉRÉ
+    const totalPrixAchatDeLaVente = currentSaleToEdit.total_prix_achat_de_la_vente;
 
     if (isNaN(parsedNewMontantPaye) || parsedNewMontantPaye < 0) {
       setStatusMessage({ type: 'error', text: 'Le nouveau montant payé est invalide.' });
@@ -180,7 +205,6 @@ export default function Sorties() {
         return;
     }
 
-    // NOUVELLE VALIDATION : Le prix de négociation ne peut pas être inférieur au prix d'achat total de la vente
     if (parsedNewTotalAmountNegotiated < totalPrixAchatDeLaVente) {
       setStatusMessage({ type: 'error', text: `Le nouveau montant total (${formatCFA(parsedNewTotalAmountNegotiated)}) ne peut pas être inférieur au prix d'achat total de la vente (${formatCFA(totalPrixAchatDeLaVente)}).` });
       return;
@@ -202,9 +226,7 @@ export default function Sorties() {
         payload.new_total_amount = parseInt(parsedNewTotalAmountNegotiated, 10);
       }
 
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
       const res = await fetch(`${API_BASE_URL}/api/ventes/${currentSaleToEdit.id}/update-payment`, {
-      // --- FIN DE LA MODIFICATION ---
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -234,9 +256,7 @@ export default function Sorties() {
       async (currentReason) => {
         setIsConfirming(true);
         try {
-          // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
           const res = await fetch(`${API_BASE_URL}/api/ventes/cancel-item`, {
-          // --- FIN DE LA MODIFICATION ---
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -279,9 +299,7 @@ export default function Sorties() {
       }
       setIsConfirming(true);
       try {
-        // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
         const res = await fetch(`${API_BASE_URL}/api/ventes/return-item`, {
-        // --- FIN DE LA MODIFICATION ---
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -376,9 +394,7 @@ export default function Sorties() {
       }
       setIsConfirming(true);
       try {
-        // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
         const res = await fetch(`${API_BASE_URL}/api/ventes/mark-as-rendu`, {
-        // --- FIN DE LA MODIFICATION ---
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -535,19 +551,19 @@ export default function Sorties() {
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium">ID Vente</th>
-                  <th className="px-3 py-2 font-medium">Date Vente</th>
-                  <th className="px-3 py-2 font-medium">Client</th>
-                  <th className="px-3 py-2 font-medium">Téléphone</th>
-                  <th className="px-3 py-2 font-medium">Article</th>
-                  <th className="px-3 py-2 font-medium">IMEI</th>
-                  <th className="px-3 py-2 font-medium text-right">Qté</th>
-                  <th className="px-3 py-2 font-medium text-right">Prix Unit.</th>
-                  <th className="px-3 py-2 font-medium text-right">Total Vente</th>
-                  <th className="px-3 py-2 font-medium text-right">Montant Payé</th>
-                  <th className="px-3 py-2 font-medium text-right">Reste à Payer</th>
-                  <th className="px-3 py-2 font-medium text-center">Statut Article</th>
-                  <th className="px-3 py-2 font-center no-print">Actions</th>
+                  <th className="px-3 py-2 font-medium w-[5%]">ID Vente</th>
+                  <th className="px-3 py-2 font-medium w-[10%]">Date Vente</th>
+                  <th className="px-3 py-2 font-medium w-[10%]">Client</th>
+                  <th className="px-3 py-2 font-medium w-[8%]">Téléphone</th> {/* Ajouté */}
+                  <th className="px-3 py-2 font-medium w-[12%]">Article</th>
+                  <th className="px-3 py-2 font-medium w-[8%]">IMEI</th>
+                  <th className="px-3 py-2 font-medium text-right w-[5%]">Qté</th>
+                  <th className="px-3 py-2 font-medium text-right w-[8%]">Prix Unit.</th>
+                  <th className="px-3 py-2 font-medium text-right w-[8%]">Total Vente</th>
+                  <th className="px-3 py-2 font-medium text-right w-[8%]">Montant Payé</th>
+                  <th className="px-3 py-2 font-medium text-right w-[8%]">Reste à Payer</th>
+                  <th className="px-3 py-2 font-medium text-center w-[10%]">Statut Article</th>
+                  <th className="px-3 py-2 font-center no-print w-[10%]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -560,7 +576,7 @@ export default function Sorties() {
 
                   return (
                     <tr key={`${data.vente_id}-${data.item_id}`} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-gray-900">
+                      <td className="px-3 py-2 text-gray-900 font-medium">
                         <div className="max-w-[60px] truncate" title={data.vente_id}>{data.vente_id}</div>
                       </td>
                       <td className="px-3 py-2 text-gray-700">
@@ -572,15 +588,20 @@ export default function Sorties() {
                         <div className="max-w-[100px] truncate" title={data.client_nom}>{data.client_nom}</div>
                       </td>
                       <td className="px-3 py-2 text-gray-700">
-                        {data.marque} {data.modele}
+                        <div className="max-w-[80px] truncate" title={data.client_telephone}>{data.client_telephone}</div> {/* Ajouté */}
                       </td>
-                      <td className="px-3 py-2 text-gray-700">{data.imei}</td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <div className="max-w-[120px] truncate" title={`${data.marque} ${data.modele}`}>{data.marque} {data.modele}</div>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <div className="max-w-[80px] truncate" title={data.imei}>{data.imei}</div>
+                      </td>
                       <td className="px-3 py-2 text-right text-gray-700">{data.quantite_vendue}</td>
                       {/* Appliquer formatCFA aux colonnes monétaires */}
                       <td className="px-3 py-2 text-right text-gray-700">{formatCFA(data.prix_unitaire_vente)}</td>
                       <td className="px-3 py-2 text-right font-medium text-gray-900">{formatCFA(data.montant_total_vente)}</td>
                       <td className="px-3 py-2 text-right font-medium text-gray-900">{formatCFA(data.montant_paye_vente)}</td>
-                      <td className="px-3 py-2 text-right font-medium text-gray-900">{formatCFA(data.reste_a_payer_vente)}</td>
+                      <td className="px-3 py-2 text-right font-medium text-red-600">{formatCFA(data.reste_a_payer_vente)}</td>
                       <td className="px-3 py-2 text-center">
                         <span className={`px-2 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap
                           ${data.statut_vente === 'annule' ? 'bg-orange-100 text-orange-800' : ''}
