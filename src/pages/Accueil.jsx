@@ -21,6 +21,13 @@ export default function Accueil() {
   const [statsError, setStatsError] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const getFormattedDate = () => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return new Date().toLocaleDateString('fr-FR', options);
@@ -30,7 +37,9 @@ export default function Accueil() {
     setStatsLoading(true);
     setStatsError('');
     try {
-      const response = await fetch('http://localhost:3001/api/reports/dashboard-stats');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const response = await fetch(`${API_BASE_URL}/api/reports/dashboard-stats`);
+      // --- FIN DE LA MODIFICATION ---
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Échec de la récupération des statistiques du tableau de bord.');
