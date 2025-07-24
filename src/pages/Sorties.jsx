@@ -536,16 +536,16 @@ export default function Sorties() {
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium w-[4%]">ID Vente</th>
+                  {/* <th className="px-3 py-2 font-medium w-[4%]">ID Vente</th> */}
                   <th className="px-3 py-2 font-medium w-[9%]">Date Vente</th>
                   <th className="px-3 py-2 font-medium w-[9%]">Client</th>
-                  <th className="px-3 py-2 font-medium w-[7%]">Marque</th>
+                  {/* <th className="px-3 py-2 font-medium w-[7%]">Marque</th> */}
                   <th className="px-3 py-2 font-medium w-[7%]">Modèle</th>
                   <th className="px-3 py-2 font-medium w-[6%]">Type</th>
                   <th className="px-3 py-2 font-medium w-[6%]">Type Carton</th>
                   <th className="px-3 py-2 font-medium w-[6%]">Stockage</th>
                   <th className="px-3 py-2 font-medium w-[7%]">IMEI</th>
-                  <th className="px-3 py-2 font-medium text-right w-[4%]">Qté</th>
+                  {/* <th className="px-3 py-2 font-medium text-right w-[4%]">Qté</th> */}
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Prix Unit.</th>
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Total Vente</th>
                   <th className="px-3 py-2 font-medium text-right w-[7%]">Montant Payé</th>
