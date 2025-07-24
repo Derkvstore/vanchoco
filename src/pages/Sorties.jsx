@@ -521,12 +521,12 @@ export default function Sorties() {
           className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200 font-medium"
         >
           <PrinterIcon className="h-5 w-5 mr-2" />
-          Imprimer l'historique
+          Imprimer la liste
         </button>
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-center text-sm">Chargement de l'historique des ventes...</p>
+        <p className="text-gray-500 text-center text-sm">Chargement des ventes...</p>
       ) : filteredVentes.length === 0 ? (
         <p className="text-gray-500 text-center text-sm">Aucune vente trouvée correspondant à votre recherche.</p>
       ) : (

@@ -1,4 +1,3 @@
-// src/pages/Benefices.jsx
 import React, { useState, useEffect } from 'react';
 import { CurrencyDollarIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -8,6 +7,13 @@ export default function Benefices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(''); // État pour la date sélectionnée
+
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   // Fonction utilitaire pour formater les montants en CFA
   const formatCFA = (amount) => {
@@ -42,7 +48,9 @@ export default function Benefices() {
     setLoading(true);
     setError(null);
     try {
-      let url = 'http://localhost:3001/api/benefices';
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      let url = `${API_BASE_URL}/api/benefices`;
+      // --- FIN DE LA MODIFICATION ---
       if (selectedDate) {
         url += `?date=${selectedDate}`; // Ajoute le paramètre de date si une date est sélectionnée
       }

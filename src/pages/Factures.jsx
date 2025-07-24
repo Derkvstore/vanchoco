@@ -37,8 +37,12 @@ export default function Factures() {
   const [currentVenteItems, setCurrentVenteItems] = useState([]); // Articles actifs de la facture pour la modale de retour
   const [newPaymentTotal, setNewPaymentTotal] = useState(''); // NOUVEAU ÉTAT pour le montant total à négocier dans la modale de paiement
 
-  // Définition de l'URL de l'API pour l'environnement Canvas
-  const API_URL = 'http://localhost:3001';
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   const formatAmount = (amount) => {
     if (amount === null || amount === undefined || isNaN(parseFloat(amount))) {
@@ -59,7 +63,9 @@ export default function Factures() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const response = await axios.get(`${API_URL}/api/factures`);
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/factures`);
+      // --- FIN DE LA MODIFICATION ---
       console.log('Frontend: Données brutes des factures récupérées par /api/factures:', response.data);
       setFactures(response.data);
     } catch (error) {
@@ -72,7 +78,9 @@ export default function Factures() {
 
   const fetchAllAvailableProducts = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/products`);
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/products`);
+      // --- FIN DE LA MODIFICATION ---
       setAllAvailableProducts(response.data.filter(p => p.status === 'active'));
     } catch (error) {
       console.error('Erreur lors du chargement des produits disponibles:', error);
@@ -82,7 +90,9 @@ export default function Factures() {
 
   const fetchAllClients = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/clients`);
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/clients`);
+      // --- FIN DE LA MODIFICATION ---
       setAllClients(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des clients:', error);
@@ -376,7 +386,9 @@ export default function Factures() {
     setCreateInvoiceError(''); // Clear previous errors
     try {
       console.log("8. Tentative de création de la Vente...");
-      const venteResponse = await axios.post(`${API_URL}/api/ventes`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const venteResponse = await axios.post(`${API_BASE_URL}/api/ventes`, {
+      // --- FIN DE LA MODIFICATION ---
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
         items: itemsToSendForVente,
@@ -394,7 +406,9 @@ export default function Factures() {
       console.log("10. Vente créée avec ID:", venteId);
 
       console.log("11. Tentative de création de la Facture...");
-      const factureResponse = await axios.post(`${API_URL}/api/factures`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const factureResponse = await axios.post(`${API_BASE_URL}/api/factures`, {
+      // --- FIN DE LA MODIFICATION ---
         vente_id: venteId, // Fourniture de l'ID de la vente
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
@@ -448,7 +462,9 @@ export default function Factures() {
     }
 
     try {
-      const response = await axios.put(`${API_URL}/api/factures/${currentFacture.facture_id}/payment`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/payment`, {
+      // --- FIN DE LA MODIFICATION ---
         montant_paye_facture: parseFloat(paymentAmount),
         new_total_amount: parseFloat(newPaymentTotal) // Envoie le nouveau montant total
       });
@@ -486,7 +502,9 @@ export default function Factures() {
     }
     try {
       // Appel à la route PUT /api/factures/:id/cancel
-      const response = await axios.put(`${API_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
+      // --- FIN DE LA MODIFICATION ---
         raison_annulation: cancelReason
       });
       setStatusMessage({ type: 'success', text: response.data.message || 'Facture annulée avec succès.' });
@@ -511,7 +529,9 @@ export default function Factures() {
     setSelectedReturnItem(null);
     try {
         // Utilise facture.facture_id dans l'URL
-        const response = await axios.get(`${API_URL}/api/factures/${facture.facture_id}`);
+        // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+        const response = await axios.get(`${API_BASE_URL}/api/factures/${facture.facture_id}`);
+        // --- FIN DE LA MODIFICATION ---
         setCurrentFactureDetails(response.data);
         // Filtrer les articles actifs de la vente liée pour le retour
         setCurrentVenteItems(response.data.articles_vendus.filter(item => item.statut_vente === 'actif')); // articles_vendus du backend
@@ -528,7 +548,9 @@ export default function Factures() {
     }
     try {
       // Appel à la route POST /api/factures/:id/return-item
-      const response = await axios.post(`${API_URL}/api/factures/${currentFacture.facture_id}/return-item`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.post(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/return-item`, {
+      // --- FIN DE LA MODIFICATION ---
         vente_item_id: selectedReturnItem.item_id,
         reason: returnReason,
         montant_rembourse_item: parseFloat(returnAmount)
@@ -555,7 +577,9 @@ export default function Factures() {
 
     try {
       // Appel à la route /api/ventes/:id/pdf (qui utilise l'ID de la VENTE)
-      const response = await axios.get(`${API_URL}/api/ventes/${factureToPrint.vente_id}/pdf`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
+      const response = await axios.get(`${API_BASE_URL}/api/ventes/${factureToPrint.vente_id}/pdf`, {
+      // --- FIN DE LA MODIFICATION ---
         responseType: 'blob',
       });
 
