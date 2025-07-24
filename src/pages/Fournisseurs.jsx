@@ -1,4 +1,3 @@
-// frontend/src/components/Fournisseurs.jsx
 import React, { useEffect, useState } from "react";
 import { PlusIcon, PencilIcon, TrashIcon, BuildingOfficeIcon, XMarkIcon } from "@heroicons/react/24/outline";
 
@@ -21,6 +20,13 @@ export default function Fournisseurs() {
   const [confirmModalContent, setConfirmModalContent] = useState({ title: "", message: "" });
   const [onConfirmAction, setOnConfirmAction] = useState(null);
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
     setOnConfirmAction(() => action);
@@ -37,7 +43,9 @@ export default function Fournisseurs() {
     setLoading(true);
     setFormError("");
     setSuccessMessage("");
-    fetch("http://localhost:3001/api/fournisseurs")
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+    fetch(`${API_BASE_URL}/api/fournisseurs`)
+    // --- FIN DE LA MODIFICATION ---
       .then((res) => {
         if (!res.ok) {
           throw new Error("Erreur réseau lors de la récupération des fournisseurs.");
@@ -79,7 +87,9 @@ export default function Fournisseurs() {
       return;
     }
 
-    let url = "http://localhost:3001/api/fournisseurs";
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
+    let url = `${API_BASE_URL}/api/fournisseurs`;
+    // --- FIN DE LA MODIFICATION ---
     let method = "POST";
 
     if (editingId) {
@@ -118,7 +128,9 @@ export default function Fournisseurs() {
       "Êtes-vous sûr de vouloir supprimer ce fournisseur ? Cette action est irréversible et ne peut être effectuée que si aucun produit n'est lié à lui.",
       async () => {
         try {
-          const res = await fetch(`http://localhost:3001/api/fournisseurs/${id}`, {
+          // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
+          const res = await fetch(`${API_BASE_URL}/api/fournisseurs/${id}`, {
+          // --- FIN DE LA MODIFICATION ---
             method: "DELETE",
           });
           if (res.ok) {
@@ -352,5 +364,4 @@ export default function Fournisseurs() {
         </div>
       )}
     </div>
-  );
-}   
+  )}

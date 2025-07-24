@@ -15,9 +15,18 @@ export default function Clients() {
   const [form, setForm] = useState({ nom: '', telephone: '', adresse: '' });
   const [editingId, setEditingId] = useState(null);
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   // Charger clients
   const fetchClients = () => {
-    fetch('http://localhost:3001/api/clients')
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+    fetch(`${API_BASE_URL}/api/clients`)
+    // --- FIN DE LA MODIFICATION ---
       .then(res => res.json())
       .then(data => {
         setClients(data);
@@ -34,9 +43,11 @@ export default function Clients() {
     e.preventDefault();
 
     const method = editingId ? 'PUT' : 'POST';
+    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
     const url = editingId
-      ? `http://localhost:3001/api/clients/${editingId}`
-      : 'http://localhost:3001/api/clients';
+      ? `${API_BASE_URL}/api/clients/${editingId}`
+      : `${API_BASE_URL}/api/clients`;
+    // --- FIN DE LA MODIFICATION ---
 
     const res = await fetch(url, {
       method,
@@ -54,7 +65,9 @@ export default function Clients() {
 
   const handleDelete = async (id) => {
     if (confirm('Confirmer la suppression ?')) {
-      const res = await fetch(`http://localhost:3001/api/clients/${id}`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
+      const res = await fetch(`${API_BASE_URL}/api/clients/${id}`, {
+      // --- FIN DE LA MODIFICATION ---
         method: 'DELETE',
       });
 
