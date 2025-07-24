@@ -1,4 +1,3 @@
-// Achats.jsx
 import React, { useState, useEffect } from 'react';
 import {
   PlusCircleIcon,
@@ -22,6 +21,13 @@ export default function Achats() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false); // Pour ouvrir la modale d'ajout/vente spéciale
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
+
   const formatCFA = (amount) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return 'N/A';
@@ -37,7 +43,9 @@ export default function Achats() {
     setLoading(true);
     setStatusMessage({ type: '', text: '' });
     try {
-      const response = await fetch('http://localhost:3001/api/achats');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
+      const response = await fetch(`${API_BASE_URL}/api/achats`);
+      // --- FIN DE LA MODIFICATION ---
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Échec de la récupération des achats.');
