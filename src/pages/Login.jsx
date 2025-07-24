@@ -1,12 +1,11 @@
 // Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import axios from 'axios'; // Commenté car non utilisé dans ce snippet, mais gardez-le si vous l'utilisez ailleurs
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState(''); // Utilisé pour afficher les messages d'erreur/succès
+  const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
   // --- MODIFICATION ICI : Utilisation de la variable d'environnement pour l'URL du backend ---
@@ -18,7 +17,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage(''); // Réinitialiser les messages précédents
+    setMessage('');
 
     try {
       // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
@@ -58,9 +57,9 @@ export default function Login() {
           />
         </div>
 
-        {/* <h2 className="text-center text-2xl font-light text-blue-700 mb-6">
-          Connexion I STORE VAN CHOCO
-        </h2> */}
+        <h2 className="text-center text-2xl font-light text-blue-700 mb-6">
+          Connexion 
+        </h2>
 
         {message && (
           <div className="mb-4 text-sm text-blue-600 text-center">{message}</div>
