@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  ShoppingCartIcon,
-  MagnifyingGlassIcon,
-  PrinterIcon, // Pour le bouton d'impression
-  CheckCircleIcon, // Pour les messages de succès
-  XCircleIcon, // Pour les messages d'erreur
-  XMarkIcon, // Pour fermer les messages
-  PlusIcon, // Pour les ajouts
-  TrashIcon // Pour les suppressions d'articles
-} from '@heroicons/react/24/outline';
+import { PlusIcon, TrashIcon, ShoppingCartIcon, CheckCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'; // Ajout d'icônes
 
 export default function NouvelleVente() {
   const [clients, setClients] = useState([]);
@@ -24,12 +15,12 @@ export default function NouvelleVente() {
   const [isMontantPayeEditable, setIsMontantPayeEditable] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false); // Nouvel état pour la soumission
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // --- NOUVELLE MODIFICATION ICI : Définition de l'URL de base du backend ---
   // Cette variable est injectée par Vite et Render.
   // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
   // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
+  // --- FIN DE LA NOUVELLE MODIFICATION ---
 
   // Helper function to format currency
   const formatCFA = (amount) => {
@@ -221,7 +212,10 @@ export default function NouvelleVente() {
           nom_client: form.client_nom,
           client_telephone: form.client_telephone, // Envoi du numéro de téléphone du client
           items: itemsToSend,
-          montant_paye: parsedMontantPaye
+          montant_paye: parsedMontantPaye,
+          // --- NOUVEL AJOUT : Indique que c'est une vente au détail (ne devrait pas générer de facture standard) ---
+          is_detail_sale: true
+          // ------------------------------------------------------------------------------------------------------
         })
       });
 
