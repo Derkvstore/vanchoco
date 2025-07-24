@@ -105,46 +105,24 @@ export default function Sorties() {
 
     return (vente.articles || []).map(item => {
       let resteAPayerItem = 0;
-      // Si l'article est actif, calculer son reste à payer proportionnellement
+      // Si l'article est actif, le reste à payer est le reste à payer de la vente globale
       if (item.statut_vente === 'actif') {
         const totalVente = parseFloat(vente.montant_total) || 0;
         const montantPayeVente = parseFloat(vente.montant_paye) || 0;
-        const prixUnitaireVente = parseFloat(item.prix_unitaire_vente) || 0;
-        const quantiteVendue = parseFloat(item.quantite_vendue) || 0;
-
-        // Calcul de la contribution de cet article au total original de la vente
-        const itemContributionToOriginalTotal = prixUnitaireVente * quantiteVendue;
-
-        // Calcul du total original de la vente (somme des prix unitaires * quantités de tous les articles)
-        // Ceci est nécessaire pour répartir le montant payé et le montant total négocié proportionnellement
-        const totalOriginalSaleValue = (vente.articles || []).reduce((sum, art) => sum + (parseFloat(art.prix_unitaire_vente) || 0) * (parseFloat(art.quantite_vendue) || 0), 0);
-
-        if (totalOriginalSaleValue > 0) {
-          // Proportion de cet article dans le montant total négocié
-          const itemProportionOfNegotiatedTotal = (itemContributionToOriginalTotal / totalOriginalSaleValue) * totalVente;
-          // Proportion de cet article dans le montant payé
-          const itemProportionOfPaidAmount = (itemContributionToOriginalTotal / totalOriginalSaleValue) * montantPayeVente;
-
-          resteAPayerItem = itemProportionOfNegotiatedTotal - itemProportionOfPaidAmount;
-        } else {
-          // Si totalOriginalSaleValue est 0, et que l'article a un prix, cela indique une anomalie
-          // On peut considérer que le reste à payer est le prix de l'article s'il n'y a pas de total de vente
-          resteAPayerItem = prixUnitaireVente * quantiteVendue;
-        }
+        resteAPayerItem = totalVente - montantPayeVente;
       } else {
         // Si l'article n'est pas actif (annulé, retourné, etc.), son reste à payer est 0
         resteAPayerItem = 0;
       }
 
-
       return {
         vente_id: vente.vente_id,
         date_vente: vente.date_vente,
         client_nom: vente.client_nom,
-        client_telephone: vente.client_telephone || 'N/A',
+        client_telephone: vente.client_telephone || 'N/A', // Gardé pour d'autres logiques si besoin
         montant_total_vente: vente.montant_total,
         montant_paye_vente: vente.montant_paye,
-        reste_a_payer_vente: resteAPayerItem, // Utilise le reste à payer calculé par article
+        reste_a_payer_vente: resteAPayerItem, // Utilise le reste à payer calculé
         statut_paiement_vente: vente.statut_paiement,
         marque: item.marque,
         modele: item.modele,
@@ -547,23 +525,26 @@ export default function Sorties() {
         <p className="text-gray-500 text-center text-sm">Aucune vente trouvée correspondant à votre recherche.</p>
       ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[1200px] table-container">
+          <div className="min-w-[1500px] table-container"> {/* Augmenté la largeur minimale */}
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
-                  <th className="px-3 py-2 font-medium w-[5%]">ID Vente</th>
-                  <th className="px-3 py-2 font-medium w-[10%]">Date Vente</th>
-                  <th className="px-3 py-2 font-medium w-[10%]">Client</th>
-                  <th className="px-3 py-2 font-medium w-[8%]">Téléphone</th> {/* Ajouté */}
-                  <th className="px-3 py-2 font-medium w-[12%]">Article</th>
-                  <th className="px-3 py-2 font-medium w-[8%]">IMEI</th>
-                  <th className="px-3 py-2 font-medium text-right w-[5%]">Qté</th>
-                  <th className="px-3 py-2 font-medium text-right w-[8%]">Prix Unit.</th>
-                  <th className="px-3 py-2 font-medium text-right w-[8%]">Total Vente</th>
-                  <th className="px-3 py-2 font-medium text-right w-[8%]">Montant Payé</th>
-                  <th className="px-3 py-2 font-medium text-right w-[8%]">Reste à Payer</th>
-                  <th className="px-3 py-2 font-medium text-center w-[10%]">Statut Article</th>
-                  <th className="px-3 py-2 font-center no-print w-[10%]">Actions</th>
+                  <th className="px-3 py-2 font-medium w-[4%]">ID Vente</th>
+                  <th className="px-3 py-2 font-medium w-[9%]">Date Vente</th>
+                  <th className="px-3 py-2 font-medium w-[9%]">Client</th>
+                  <th className="px-3 py-2 font-medium w-[8%]">Marque</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[8%]">Modèle</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[6%]">Type</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[6%]">Type Carton</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[6%]">Stockage</th> {/* Séparé */}
+                  <th className="px-3 py-2 font-medium w-[7%]">IMEI</th>
+                  <th className="px-3 py-2 font-medium text-right w-[4%]">Qté</th>
+                  <th className="px-3 py-2 font-medium text-right w-[7%]">Prix Unit.</th>
+                  <th className="px-3 py-2 font-medium text-right w-[7%]">Total Vente</th>
+                  <th className="px-3 py-2 font-medium text-right w-[7%]">Montant Payé</th>
+                  <th className="px-3 py-2 font-medium text-right w-[7%]">Reste à Payer</th>
+                  <th className="px-3 py-2 font-medium text-center w-[7%]">Statut Article</th>
+                  <th className="px-3 py-2 text-right no-print w-[8%]">Actions</th> {/* Aligné à droite */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -587,11 +568,21 @@ export default function Sorties() {
                       <td className="px-3 py-2 text-gray-700">
                         <div className="max-w-[100px] truncate" title={data.client_nom}>{data.client_nom}</div>
                       </td>
+                      {/* Colonnes Article Séparées */}
                       <td className="px-3 py-2 text-gray-700">
-                        <div className="max-w-[80px] truncate" title={data.client_telephone}>{data.client_telephone}</div> {/* Ajouté */}
+                        <div className="max-w-[80px] truncate" title={data.marque}>{data.marque}</div>
                       </td>
                       <td className="px-3 py-2 text-gray-700">
-                        <div className="max-w-[120px] truncate" title={`${data.marque} ${data.modele}`}>{data.marque} {data.modele}</div>
+                        <div className="max-w-[80px] truncate" title={data.modele}>{data.modele}</div>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <div className="max-w-[60px] truncate" title={data.type || '—'}>{data.type || '—'}</div>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <div className="max-w-[60px] truncate" title={data.type_carton || '—'}>{data.type_carton || '—'}</div>
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        <div className="max-w-[60px] truncate" title={data.stockage || '—'}>{data.stockage || '—'}</div>
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <div className="max-w-[80px] truncate" title={data.imei}>{data.imei}</div>
@@ -625,7 +616,7 @@ export default function Sorties() {
                           }
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-center space-x-1 no-print">
+                      <td className="px-3 py-2 text-right space-x-1 no-print"> {/* Aligné à droite */}
                         {/* Bouton Modifier Paiement (visible si la vente n'est pas intégralement payée ou annulée ET si ce n'est PAS un article de facture spéciale) */}
                         {!data.is_special_sale_item && data.statut_paiement_vente !== 'payee_integralement' && data.statut_paiement_vente !== 'annulee' && data.statut_vente === 'actif' && (
                           <button
