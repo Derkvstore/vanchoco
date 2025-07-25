@@ -32,7 +32,7 @@ const STOCKAGES = ["64 Go", "128 Go", "256 Go", "512 Go", "1 To"];
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState(''); // Renamed from 'search' to 'searchTerm' for consistency
+  const [searchTerm, setSearchTerm] = useState(''); // Renommé de 'search' à 'searchTerm' pour la cohérence
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
@@ -245,6 +245,15 @@ export default function Products() {
         setIsSubmitting(false);
         return;
       }
+
+      // --- NOUVELLE VÉRIFICATION : Détecter les doublons DANS l'entrée IMEI ---
+      const uniqueImeis = new Set(imeiInput);
+      if (uniqueImeis.size !== imeiInput.length) {
+        setFormError("Des IMEIs dupliqués ont été détectés dans votre liste. Chaque IMEI doit être unique.");
+        setIsSubmitting(false);
+        return;
+      }
+      // --- FIN NOUVELLE VÉRIFICATION ---
 
       for (const imei of imeiInput) {
         if (!/^\d{6}$/.test(imei)) {

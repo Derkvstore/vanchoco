@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import {
   PlusIcon,
@@ -67,6 +67,12 @@ export default function SpecialOrders() {
   const [raisonAnnulation, setRaisonAnnulation] = useState('');
   const [initialMontantPaye, setInitialMontantPaye] = useState(''); // For order creation
 
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   // --- Utility functions ---
   const formatCFA = (amount) => {
@@ -111,7 +117,9 @@ export default function SpecialOrders() {
     setLoadingOrders(true);
     setErrorOrders(null);
     try {
-      const response = await axios.get('http://localhost:3001/api/special-orders');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+      const response = await axios.get(`${API_BASE_URL}/api/special-orders`);
+      // --- FIN DE LA MODIFICATION ---
       setOrders(response.data);
     } catch (err) {
       console.error('Error loading special orders:', err);
@@ -123,9 +131,13 @@ export default function SpecialOrders() {
 
   const fetchClientsAndFournisseurs = async () => {
     try {
-      const clientsRes = await axios.get('http://localhost:3001/api/clients');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+      const clientsRes = await axios.get(`${API_BASE_URL}/api/clients`);
+      // --- FIN DE LA MODIFICATION ---
       setClients(clientsRes.data);
-      const fournisseursRes = await axios.get('http://localhost:3001/api/fournisseurs');
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+      const fournisseursRes = await axios.get(`${API_BASE_URL}/api/fournisseurs`);
+      // --- FIN DE LA MODIFICATION ---
       setFournisseurs(fournisseursRes.data);
     } catch (err) {
       console.error('Error loading clients or suppliers:', err);
@@ -215,13 +227,17 @@ export default function SpecialOrders() {
       if (currentOrder) {
         // For editing, use the status update route if applicable
         // Note: This form does not update all order fields, only status and reason
-        await axios.put(`http://localhost:3001/api/special-orders/${currentOrder.order_id}/update-status`, {
+        // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+        await axios.put(`${API_BASE_URL}/api/special-orders/${currentOrder.order_id}/update-status`, {
+        // --- FIN DE LA MODIFICATION ---
             statut: statut,
             raison_annulation: raisonAnnulation
         });
         setStatusMessage({ type: 'success', text: 'Special order updated successfully!' });
       } else {
-        await axios.post('http://localhost:3001/api/special-orders', orderData);
+        // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+        await axios.post(`${API_BASE_URL}/api/special-orders`, orderData);
+        // --- FIN DE LA MODIFICATION ---
         setStatusMessage({ type: 'success', text: 'Special order added successfully!' });
       }
       setIsModalOpen(false);
@@ -238,7 +254,9 @@ export default function SpecialOrders() {
     setConfirmModalError('');
     setIsConfirming(true); // Activate confirmation button loading state
     try {
-      const res = await axios.put(`http://localhost:3001/api/special-orders/${orderId}/update-status`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+      const res = await axios.put(`${API_BASE_URL}/api/special-orders/${orderId}/update-status`, {
+      // --- FIN DE LA MODIFICATION ---
         statut: newStatus,
         raison_annulation: reason
       });
@@ -283,7 +301,9 @@ export default function SpecialOrders() {
     }
 
     try {
-      await axios.put(`http://localhost:3001/api/special-orders/${orderId}/update-payment`, {
+      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
+      await axios.put(`${API_BASE_URL}/api/special-orders/${orderId}/update-payment`, {
+      // --- FIN DE LA MODIFICATION ---
         new_montant_paye: parsedNewMontantPaye
       });
       setStatusMessage({ type: 'success', text: 'Special order payment updated successfully!' });
@@ -416,7 +436,6 @@ export default function SpecialOrders() {
     }, 0);
     setTotalSoldBenefice(calculatedBenefice);
   }, [filteredOrders]);
-
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen font-sans">
@@ -672,7 +691,7 @@ export default function SpecialOrders() {
                   type="text"
                   id="modele"
                   value={modele}
-                  onChange={(e) => setModele(e.target.value)}
+                  onChange={(e) => setModèle(e.target.value)}
                   required
                   className="mt-0.5 block w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
                 />
