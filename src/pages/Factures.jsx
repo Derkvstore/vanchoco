@@ -3,7 +3,7 @@ import axios from 'axios'; // Assurez-vous que axios est bien importé
 import {
   PlusIcon, DocumentTextIcon, MagnifyingGlassIcon, TrashIcon,
   CurrencyDollarIcon, XMarkIcon, PrinterIcon, ArrowUturnLeftIcon,
-  CheckCircleIcon, XCircleIcon, PlusCircleIcon
+  CheckCircleIcon, XCircleIcon, PlusCircleIcon, ArrowPathIcon // Ajout de ArrowPathIcon pour le bouton "Rendu"
 } from '@heroicons/react/24/outline';
 
 export default function Factures() {
@@ -255,7 +255,7 @@ export default function Factures() {
         );
 
         if (!productFound) {
-            currentError = `IMEI "${imei}" ne correspond pas au produit sélectionné ou n'est pas disponible en stock.`;
+            currentError = `IMEI "${imei}" ne correspond pas au produit sélectionné ou n'est pas disponible en stock.`
             break;
         }
         validImeis.push(imei);
@@ -718,6 +718,16 @@ export default function Factures() {
                       statusBgClass = 'bg-gray-100 text-gray-800';
                   }
 
+                  // Calculer la différence de temps pour les boutons Annuler/Rendu
+                  const invoiceDate = new Date(facture.date_facture);
+                  const now = new Date();
+                  const diffHours = (now.getTime() - invoiceDate.getTime()) / (1000 * 60 * 60);
+
+                  const isInvoiceCancellableOrRendable = facture.statut_facture !== 'annulee' && facture.statut_facture !== 'retour_total';
+                  const showCancelButton = isInvoiceCancellableOrRendable && diffHours <= 24;
+                  const showRenduButton = isInvoiceCancellableOrRendable && diffHours > 24;
+
+
                   return (
                     <tr key={facture.facture_id} className="hover:bg-blue-50">
                       <td className="px-3 py-2 text-gray-900 font-medium">{facture.facture_id}</td>
@@ -747,17 +757,38 @@ export default function Factures() {
                         >
                           <CurrencyDollarIcon className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
-                            handleOpenCancelModal(facture);
-                          }}
-                          className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
-                          title="Annuler Facture"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total'}
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </button>
+
+                        {/* Bouton Annuler (moins de 24h) */}
+                        {showCancelButton && (
+                          <button
+                            onClick={() => {
+                              console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
+                              handleOpenCancelModal(facture);
+                            }}
+                            className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
+                            title="Annuler Facture"
+                            disabled={isCancellingInvoice} // Utilise l'état de chargement global pour l'annulation
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {/* Bouton Rendu (plus de 24h) */}
+                        {showRenduButton && (
+                          <button
+                            onClick={() => {
+                              console.log('Frontend: Tentative d\'ouverture modale rendu pour facture:', facture);
+                              handleOpenCancelModal(facture); // Même fonction que l'annulation
+                            }}
+                            className="p-1 rounded-full text-orange-600 hover:bg-orange-100 transition"
+                            title="Marquer comme Rendu"
+                            disabled={isCancellingInvoice} // Utilise l'état de chargement global pour l'annulation
+                          >
+                            <ArrowPathIcon className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {/* Bouton Gérer Retour (toujours visible) */}
                         <button
                           onClick={() => {
                             console.log('Frontend: Tentative d\'ouverture modale retour pour facture:', facture);
