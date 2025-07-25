@@ -69,14 +69,7 @@ export default function Benefices() {
     fetchBenefices();
   }, [selectedDate]); // Re-déclenche la récupération des données lorsque la date sélectionnée change
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'actif': return 'bg-green-100 text-green-800';
-      case 'annule': return 'bg-red-100 text-red-800';
-      case 'retourne': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // La fonction getStatusColor n'est plus nécessaire car nous n'affichons que les articles 'actifs'
 
   return (
     <div className="p-8 font-sans bg-gray-50 rounded-3xl shadow-xl border border-gray-100">
@@ -141,8 +134,6 @@ export default function Benefices() {
                 <th className="py-3 px-4 text-right font-semibold uppercase">Prix Vente Négocié</th>
                 <th className="py-3 px-4 text-right font-semibold uppercase">Qté</th>
                 <th className="py-3 px-4 text-left font-semibold uppercase">Date Vente</th>
-                <th className="py-3 px-4 text-center font-semibold uppercase">Statut Article</th> {/* Nouvelle colonne */}
-                <th className="py-3 px-4 text-right font-semibold uppercase">Montant Remboursé</th> {/* Nouvelle colonne */}
                 <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Unitaire</th>
                 <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total Ligne</th>
               </tr>
@@ -154,19 +145,13 @@ export default function Benefices() {
                   <td className="py-3 px-4 whitespace-nowrap">{item.stockage || 'N/A'}</td>
                   <td className="py-3 px-4 whitespace-nowrap">{item.type}</td>
                   <td className="py-3 px-4 whitespace-nowrap">{item.type_carton || 'N/A'}</td>
-                  <td className="py-3 px-4 whitespace-nowrap">{item.imei}</td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.prix_unitaire_achat)}</td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
-                    {formatCFA(item.quantite_vendue > 0 ? item.proportional_revenue / item.quantite_vendue : 0)}
+                  <td className="px-3 py-4 whitespace-nowrap">{item.imei}</td>
+                  <td className="px-3 py-4 text-right whitespace-nowrap">{formatCFA(item.prix_unitaire_achat)}</td>
+                  <td className="px-3 py-4 text-right whitespace-nowrap">
+                    {formatCFA(item.quantite_vendue > 0 ? item.actual_revenue_per_line / item.quantite_vendue : 0)}
                   </td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">{item.quantite_vendue}</td>
                   <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.date_vente)}</td>
-                  <td className="py-3 px-4 text-center whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${getStatusColor(item.statut_vente)}`}>
-                      {item.statut_vente.replace(/_/g, ' ')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.montant_rembourse_item)}</td>
                   <td className="py-3 px-4 text-right whitespace-nowrap font-medium text-green-700">
                     {formatCFA(item.benefice_unitaire_produit)}
                   </td>
