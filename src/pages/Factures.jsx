@@ -20,16 +20,19 @@ export default function Factures() {
   const [newInvoicePayment, setNewInvoicePayment] = useState(0);
   const [negotiatedPrice, setNegotiatedPrice] = useState(''); // Montant négocié optionnel
   const [createInvoiceError, setCreateInvoiceError] = useState('');
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false); // Nouvel état de chargement
 
   // Modale Gérer Paiement
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [currentFacture, setCurrentFacture] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [newPaymentTotal, setNewPaymentTotal] = useState(''); // Pour le montant total négocié
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Nouvel état de chargement
 
   // Modale Annuler Facture
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false); // Nouvel état de chargement
 
   // Modale Gérer Retour
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -38,6 +41,7 @@ export default function Factures() {
   const [selectedReturnItem, setSelectedReturnItem] = useState(null);
   const [returnReason, setReturnReason] = useState('');
   const [returnAmount, setReturnAmount] = useState('');
+  const [isReturningItem, setIsReturningItem] = useState(false); // Nouvel état de chargement
 
   // Données pour les datalists de la création de facture
   const [allAvailableProducts, setAllAvailableProducts] = useState([]);
@@ -46,12 +50,8 @@ export default function Factures() {
   // Refs pour les identifiants uniques des lignes de facture
   const nextRowId = useRef(0);
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
-  // Cette variable est injectée par Vite et Render.
-  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
-  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  // --- Définition de l'URL de base du backend ---
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
 
   // Fonction utilitaire pour formater les montants en CFA
   const formatAmount = (amount) => {
@@ -81,7 +81,6 @@ export default function Factures() {
   const { subtotal: total, balance } = calculateOverallTotals();
 
   // Dépendances pour le calcul du montant dû dans la modale de paiement
-  // Ceci est la déclaration principale, l'autre sera supprimée
   const currentPaymentModalBalanceDue = currentFacture && newPaymentTotal !== '' && paymentAmount !== ''
     ? parseFloat(newPaymentTotal) - parseFloat(paymentAmount)
     : (currentFacture ? (currentFacture.montant_original_facture - currentFacture.montant_paye_facture) : 0);
@@ -91,9 +90,7 @@ export default function Factures() {
   const fetchFactures = useCallback(async () => {
     setLoading(true);
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.get(`${API_BASE_URL}/api/factures`);
-      // --- FIN DE LA MODIFICATION ---
       setFactures(response.data);
     } catch (error) {
       setStatusMessage({ type: 'error', text: `Erreur lors du chargement des factures: ${error.response?.data?.error || error.message}` });
@@ -104,9 +101,7 @@ export default function Factures() {
 
   const fetchAllAvailableProducts = useCallback(async () => {
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.get(`${API_BASE_URL}/api/products`);
-      // --- FIN DE LA MODIFICATION ---
       // Filtrer les produits pour n'inclure que ceux qui sont 'active' et ont une quantité de 1
       setAllAvailableProducts(response.data.filter(p => p.status === 'active' && p.quantite === 1));
     } catch (error) {
@@ -117,9 +112,7 @@ export default function Factures() {
 
   const fetchAllClients = useCallback(async () => {
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.get(`${API_BASE_URL}/api/clients`);
-      // --- FIN DE LA MODIFICATION ---
       setAllClients(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des clients:', error);
@@ -141,12 +134,12 @@ export default function Factures() {
       id: nextRowId.current++,
       selectedProduct: null,
       productSearchTerm: '',
-      imeiInput: '',
-      imeiList: [],
-      quantity: 0, // Should be 1 for IMEI-based products
+      imeiInput: '', // Revert to single string input
+      imeiList: [], // List of validated IMEIs
+      quantity: 0,
       unitPrice: '',
       totalPrice: 0,
-      validationError: '',
+      validationError: '', // General error for the row
       purchasePrice: null // Store purchase price for validation
     }]);
   };
@@ -184,25 +177,30 @@ export default function Factures() {
     setInvoiceRows(prevRows =>
       prevRows.map(row => {
         if (row.id === rowId) {
-          return {
+          const newRow = {
             ...row,
             selectedProduct: foundProduct || null,
-            productSearchTerm: selectedValue, // Utilise selectedValue ici
+            productSearchTerm: selectedValue,
             unitPrice: foundProduct ? foundProduct.prix_vente : '',
-            purchasePrice: foundProduct ? foundProduct.prix_achat : 0, // Stocke le prix d'achat
-            imeiInput: '',
+            purchasePrice: foundProduct ? foundProduct.prix_achat : 0,
+            imeiInput: '', // Reset IMEI input for new product selection
             imeiList: [],
             quantity: 0,
             totalPrice: 0,
             validationError: foundProduct ? '' : 'Produit non valide ou non trouvé.'
           };
+          // If a product is selected and there's existing IMEI input, re-validate
+          if (foundProduct && newRow.imeiInput) {
+            validateImeiAndCalculateQuantity(rowId, newRow.imeiInput, newRow.selectedProduct);
+          }
+          return newRow;
         }
         return row;
       })
     );
   };
 
-
+  // Reverted to single IMEI input change handler
   const handleImeiInputChange = useCallback((e, rowId) => {
     const input = e.target.value;
     setInvoiceRows(prevRows => prevRows.map(row => {
@@ -213,23 +211,18 @@ export default function Factures() {
     }));
   }, []);
 
+  // Updated validation logic for single IMEI input
   const validateImeiAndCalculateQuantity = useCallback(async (rowId) => {
-    setInvoiceRows(prevRows => prevRows.map(row => {
+    const rowToValidate = invoiceRows.find(row => row.id === rowId);
+
+    if (!rowToValidate || !rowToValidate.selectedProduct) {
+      setInvoiceRows(prevRows => prevRows.map(row => {
         if (row.id === rowId) {
-            return { ...row, validationError: 'Validation en cours...' };
+          return { ...row, validationError: 'Veuillez sélectionner un produit d\'abord.', imeiList: [], quantity: 0, totalPrice: 0 };
         }
         return row;
-    }));
-
-    const rowToValidate = invoiceRows.find(row => row.id === rowId);
-    if (!rowToValidate || !rowToValidate.selectedProduct) {
-        setInvoiceRows(prevRows => prevRows.map(row => {
-            if (row.id === rowId) {
-                return { ...row, validationError: 'Veuillez sélectionner un produit d\'abord.', imeiList: [], quantity: 0, totalPrice: 0 };
-            }
-            return row;
-        }));
-        return;
+      }));
+      return;
     }
 
     const imeiStrings = rowToValidate.imeiInput.split(/[\n,]/).map(s => s.trim()).filter(s => s !== '');
@@ -242,6 +235,7 @@ export default function Factures() {
             break;
         }
 
+        // Check uniqueness across all OTHER rows of the current invoice
         const isImeiUsedInOtherRow = invoiceRows.some(r =>
             r.id !== rowId && r.imeiList.includes(imei)
         );
@@ -351,13 +345,12 @@ export default function Factures() {
             console.log(`Validation échouée pour la ligne ${row.id}: Aucun produit sélectionné.`);
             break;
         }
-        if (row.imeiList.length === 0) {
+        if (row.imeiList.length === 0) { // Check valid IMEIs
             setCreateInvoiceError(`La ligne ${row.id} ne contient aucun IMEI valide.`);
             hasRowError = true;
             console.log(`Validation échouée pour la ligne ${row.id}: Aucun IMEI valide.`);
             break;
         }
-        // La validation du prix unitaire est maintenant dans handleUnitPriceChange
         if (row.validationError) { // Vérifie s'il y a une erreur de validation sur la ligne (y compris prix < prix_achat)
             setCreateInvoiceError(`Erreur de validation sur la ligne ${row.id}: ${row.validationError}`);
             hasRowError = true;
@@ -385,7 +378,7 @@ export default function Factures() {
 
     const itemsToSendForVente = [];
     for (const row of invoiceRows) {
-        for (const imei of row.imeiList) {
+        for (const imei of row.imeiList) { // Use imeiList (validated IMEIs)
             const product = allAvailableProducts.find(p => p.imei === imei);
             if (product) {
                 itemsToSendForVente.push({
@@ -398,19 +391,18 @@ export default function Factures() {
                     type_carton: product.type_carton,
                     prix_unitaire_vente: parseFloat(row.unitPrice),
                     prix_unitaire_achat: product.prix_achat, // Assurez-vous que le prix d'achat est envoyé pour la validation backend
-                    quantite_vendue: 1
+                    quantite_vendue: 1 // Chaque IMEI est une quantité de 1
                 });
             }
         }
     }
     console.log("7. Items à envoyer au backend pour la vente:", itemsToSendForVente);
 
-    setCreateInvoiceError(''); // Clear previous errors
+    setCreateInvoiceError(''); // Effacer les erreurs précédentes
+    setIsCreatingInvoice(true); // Début du chargement
     try {
       console.log("8. Tentative de création de la Vente...");
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
       const venteResponse = await axios.post(`${API_BASE_URL}/api/ventes`, {
-      // --- FIN DE LA MODIFICATION ---
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
         items: itemsToSendForVente,
@@ -428,9 +420,7 @@ export default function Factures() {
       console.log("10. Vente créée avec ID:", venteId);
 
       console.log("11. Tentative de création de la Facture...");
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel axios ---
       const factureResponse = await axios.post(`${API_BASE_URL}/api/factures`, {
-      // --- FIN DE LA MODIFICATION ---
         vente_id: venteId, // Fourniture de l'ID de la vente
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
@@ -448,14 +438,20 @@ export default function Factures() {
       setCreateInvoiceError(`Erreur: ${error.response?.data?.error || error.message}`);
       console.log("13. Création de facture échouée dans le bloc catch. Message d'erreur défini.");
     } finally {
+      setIsCreatingInvoice(false); // Fin du chargement
       console.log("--- Fin de handleConfirmCreateInvoice ---");
     }
   };
 
   // Logique pour désactiver le bouton de confirmation de création de facture
   const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) ||
-    invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0) ||
-    (negotiatedPrice && isNaN(parseFloat(negotiatedPrice)));
+    invoiceRows.some(row =>
+      row.validationError || // General row error (e.g., product not selected or some IMEIs invalid)
+      !row.selectedProduct ||
+      row.imeiList.length === 0 || // No valid IMEIs
+      parseFloat(row.unitPrice) <= 0
+    ) ||
+    (negotiatedPrice && isNaN(parseFloat(negotiatedPrice))) || isCreatingInvoice;
 
 
   // --- Gestion Paiement ---
@@ -481,10 +477,9 @@ export default function Factures() {
         return;
     }
 
+    setIsUpdatingPayment(true); // Début du chargement
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/payment`, {
-      // --- FIN DE LA MODIFICATION ---
         montant_paye_facture: parseFloat(paymentAmount),
         new_total_amount: parseFloat(newPaymentTotal) // Envoie le nouveau montant total
       });
@@ -496,11 +491,10 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour du paiement:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsUpdatingPayment(false); // Fin du chargement
     }
   };
-
-  // La variable currentPaymentModalBalanceDue est déjà déclarée plus haut.
-  // Suppression de la déclaration dupliquée ici.
 
   const handleOpenCancelModal = (facture) => {
     if (!facture || !facture.facture_id) {
@@ -518,11 +512,10 @@ export default function Factures() {
       setStatusMessage({ type: 'error', text: 'Veuillez fournir une raison d\'annulation et s\'assurer que la facture est liée.' });
       return;
     }
+    setIsCancellingInvoice(true); // Début du chargement
     try {
       // Appel à la route PUT /api/factures/:id/cancel
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
-      // --- FIN DE LA MODIFICATION ---
         raison_annulation: cancelReason
       });
       setStatusMessage({ type: 'success', text: response.data.message || 'Facture annulée avec succès.' });
@@ -532,6 +525,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors de l\'annulation de la facture:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsCancellingInvoice(false); // Fin du chargement
     }
   };
 
@@ -547,9 +542,7 @@ export default function Factures() {
     setSelectedReturnItem(null);
     try {
         // Utilise facture.facture_id dans l'URL
-        // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
         const response = await axios.get(`${API_BASE_URL}/api/factures/${facture.facture_id}`);
-        // --- FIN DE LA MODIFICATION ---
         setCurrentFactureDetails(response.data);
         // Filtrer les articles actifs de la vente liée pour le retour
         setCurrentVenteItems(response.data.articles_vendus.filter(item => item.statut_vente === 'actif')); // articles_vendus du backend
@@ -564,11 +557,10 @@ export default function Factures() {
       setStatusMessage({ type: 'error', text: 'Données de retour incomplètes ou invalides.' });
       return;
     }
+    setIsReturningItem(true); // Début du chargement
     try {
       // Appel à la route POST /api/factures/:id/return-item
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.post(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/return-item`, {
-      // --- FIN DE LA MODIFICATION ---
         vente_item_id: selectedReturnItem.item_id,
         reason: returnReason,
         montant_rembourse_item: parseFloat(returnAmount)
@@ -583,6 +575,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors du traitement du retour:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsReturningItem(false); // Fin du chargement
     }
   };
 
@@ -595,9 +589,7 @@ export default function Factures() {
 
     try {
       // Appel à la route /api/ventes/:id/pdf (qui utilise l'ID de la VENTE)
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
       const response = await axios.get(`${API_BASE_URL}/api/ventes/${factureToPrint.vente_id}/pdf`, {
-      // --- FIN DE LA MODIFICATION ---
         responseType: 'blob',
       });
 
@@ -624,9 +616,6 @@ export default function Factures() {
       ))
     );
   });
-
-  // La variable isConfirmButtonDisabled est déjà déclarée plus haut.
-  // Suppression de la déclaration dupliquée ici.
 
   return (
     <div className="p-4 max-w-full mx-auto font-sans bg-gray-50 rounded-xl shadow border border-gray-200">
@@ -785,7 +774,7 @@ export default function Factures() {
                             console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
                             handlePrintInvoice(facture.facture_id);
                           }}
-                          className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
+                          className="p-1 rounded-full text-blue-600 hover:text-blue-800 transition"
                           title="Imprimer Facture"
                         >
                           <PrinterIcon className="h-4 w-4" />
@@ -846,7 +835,7 @@ export default function Factures() {
                 <thead className="bg-gray-100 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left w-[20%]">Produit</th>
-                    <th className="px-3 py-2 text-left w-[40%]">IMEI</th>
+                    <th className="px-3 py-2 text-left w-[40%]">IMEI(s)</th> {/* Updated header */}
                     <th className="px-3 py-2 text-right w-[15%]">P.Unit</th>
                     <th className="px-3 py-2 text-right w-[15%]">Montant</th>
                     <th className="px-3 py-2 text-center w-[10%]">Actions</th>
@@ -876,15 +865,17 @@ export default function Factures() {
                         </datalist>
                       </td>
                       <td className="px-3 py-2">
-                        <input
-                          type="text"
-                          placeholder="IMEI (6 chiffres)"
+                        {/* Single textarea for IMEI input */}
+                        <textarea
+                          placeholder="Entrez les IMEI (un par ligne ou séparés par des virgules)"
                           value={row.imeiInput}
                           onChange={(e) => handleImeiInputChange(e, row.id)}
                           onBlur={() => validateImeiAndCalculateQuantity(row.id)}
-                          maxLength={6}
-                          className="w-full border border-blue-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
-                        />
+                          rows="3"
+                          className={`w-full border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 ${
+                            row.validationError ? 'border-red-400 focus:ring-red-400' : 'border-blue-300 focus:ring-blue-400'
+                          }`}
+                        ></textarea>
                         {row.validationError && <p className="text-red-500 text-[10px] mt-1">{row.validationError}</p>}
                       </td>
                       <td className="px-3 py-2">
@@ -893,7 +884,7 @@ export default function Factures() {
                           value={row.unitPrice}
                           onChange={(e) => handleUnitPriceChange(e, row.id)}
                           className="w-full border border-blue-300 rounded-md px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-blue-400"
-                          step="1" // MODIFIÉ: step="1" pour les entiers
+                          step="1"
                           min="0"
                         />
                       </td>
@@ -931,7 +922,7 @@ export default function Factures() {
                   value={negotiatedPrice}
                   onChange={(e) => setNegotiatedPrice(e.target.value)}
                   className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-                  step="1" // MODIFIÉ: step="1" pour les entiers
+                  step="1"
                   min="0"
                 />
               </div>
@@ -943,7 +934,7 @@ export default function Factures() {
                   value={newInvoicePayment}
                   onChange={(e) => setNewInvoicePayment(e.target.value === '' ? 0 : parseFloat(e.target.value))}
                   className="w-full border border-blue-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-                  step="1" // MODIFIÉ: step="1" pour les entiers
+                  step="1"
                   min="0"
                   max={total}
                   required
@@ -960,6 +951,7 @@ export default function Factures() {
                 type="button"
                 onClick={() => { setShowCreateInvoiceModal(false); resetCreateInvoiceForm(); }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isCreatingInvoice}
               >
                 Annuler
               </button>
@@ -969,7 +961,7 @@ export default function Factures() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 disabled={isConfirmButtonDisabled}
               >
-                Confirmer Facture
+                {isCreatingInvoice ? 'Création...' : 'Confirmer Facture'}
               </button>
             </div>
           </div>
@@ -991,7 +983,7 @@ export default function Factures() {
               value={newPaymentTotal}
               onChange={(e) => setNewPaymentTotal(e.target.value)}
               className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-              step="1" // MODIFIÉ: step="1" pour les entiers
+              step="1"
               min="0"
             />
 
@@ -1002,9 +994,9 @@ export default function Factures() {
               value={paymentAmount}
               onChange={(e) => setPaymentAmount(e.target.value)}
               className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-              step="1" // MODIFIÉ: step="1" pour les entiers
+              step="1"
               min="0"
-              max={newPaymentTotal} // Max est le nouveau montant total
+              max={newPaymentTotal}
             />
             <p className="text-lg font-bold text-red-600 mb-4">Montant Dû Actuel: {formatAmount(currentPaymentModalBalanceDue)}</p>
 
@@ -1012,14 +1004,16 @@ export default function Factures() {
               <button
                 onClick={() => setShowPaymentModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isUpdatingPayment}
               >
                 Annuler
               </button>
               <button
                 onClick={handleUpdatePayment}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                disabled={isUpdatingPayment}
               >
-                Mettre à Jour Paiement
+                {isUpdatingPayment ? 'Mise à jour...' : 'Mettre à Jour Paiement'}
               </button>
             </div>
           </div>
@@ -1045,14 +1039,16 @@ export default function Factures() {
               <button
                 onClick={() => setShowCancelModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isCancellingInvoice}
               >
                 Annuler
               </button>
               <button
                 onClick={handleCancelInvoice}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                disabled={isCancellingInvoice}
               >
-                Confirmer Annulation
+                {isCancellingInvoice ? 'Annulation...' : 'Confirmer Annulation'}
               </button>
             </div>
           </div>
@@ -1107,7 +1103,7 @@ export default function Factures() {
                         value={returnAmount}
                         onChange={(e) => setReturnAmount(e.target.value)}
                         className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-                        step="1" // MODIFIÉ: step="1" pour les entiers
+                        step="1"
                         min="0"
                         max={selectedReturnItem.prix_unitaire_vente}
                         required
@@ -1119,15 +1115,16 @@ export default function Factures() {
               <button
                 onClick={() => { setShowReturnModal(false); setSelectedReturnItem(null); setReturnReason(''); setReturnAmount(''); setCurrentFactureDetails(null); }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isReturningItem}
               >
                 Annuler
               </button>
               <button
                 onClick={handleReturnItem}
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
-                disabled={!selectedReturnItem || !returnReason || isNaN(parseFloat(returnAmount))}
+                disabled={!selectedReturnItem || !returnReason || isNaN(parseFloat(returnAmount)) || isReturningItem}
               >
-                Confirmer Retour
+                {isReturningItem ? 'Retour en cours...' : 'Confirmer Retour'}
               </button>
             </div>
           </div>
