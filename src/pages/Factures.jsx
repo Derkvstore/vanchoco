@@ -541,6 +541,30 @@ export default function Factures() {
     }
   };
 
+  // NEW: Function to handle full invoice cancellation
+  const handleCancelFullInvoice = async (factureId) => {
+    // Remplacer window.confirm par une modale personnalisée si nécessaire
+    if (!confirm('Êtes-vous sûr de vouloir annuler cette facture entièrement? Tous les mobiles associés seront remis en stock.')) {
+      return;
+    }
+    setStatusMessage({ type: '', text: '' });
+    // Assume a loading state if needed
+    try {
+      // This API endpoint needs to be implemented in the backend
+      // It should:
+      // 1. Update the facture status to 'annulee'
+      // 2. Update all associated vente_items status to 'annule'
+      // 3. Update the corresponding products' status to 'active' and quantity to 1
+      const response = await axios.post(`${API_BASE_URL}/api/factures/${factureId}/cancel-full`);
+      setStatusMessage({ type: 'success', text: response.data.message || `Facture ${factureId} annulée entièrement et mobiles remis en stock.` });
+      fetchFactures(); // Refresh the list
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation complète de la facture:', error);
+      setStatusMessage({ type: 'error', text: `Erreur lors de l'annulation complète: ${error.response?.data?.error || error.message}` });
+    }
+  };
+
+
   const handlePrintInvoice = async (factureId) => {
     const factureToPrint = factures.find(f => f.facture_id === factureId); // Utilise facture_id
     if (!factureToPrint || !factureToPrint.vente_id) {
@@ -563,8 +587,17 @@ export default function Factures() {
     }
   };
 
+  // MODIFIED: Filter invoices based on search term (removed hiding fully paid invoices)
   const filteredFactures = factures.filter(facture => {
     const searchLower = searchTerm.toLowerCase();
+
+    // Condition to hide fully paid invoices - REMOVED AS PER USER REQUEST
+    // const isFullyPaidAndSettled = facture.statut_facture === 'payee_integralement' && facture.montant_actuel_du <= 0;
+    // if (isFullyPaidAndSettled) {
+    //   return false; // Hide this invoice
+    // }
+
+    // Existing search term filter
     return (
       (facture.facture_id && facture.facture_id.toString().includes(searchLower)) || // Utilise facture_id
       (facture.numero_facture && facture.numero_facture.toLowerCase().includes(searchLower)) ||
@@ -679,14 +712,7 @@ export default function Factures() {
                       statusBgClass = 'bg-gray-100 text-gray-800';
                   }
 
-                  // Calculer la différence de temps pour les boutons Annuler/Rendu
-                  const invoiceDate = new Date(facture.date_facture);
-                  const now = new Date();
-                  const diffHours = (now.getTime() - invoiceDate.getTime()) / (1000 * 60 * 60);
-
-                  const isInvoiceCancellableOrRendable = facture.statut_facture !== 'annulee' && facture.statut_facture !== 'retour_total';
-                  const showCancelButton = isInvoiceCancellableOrRendable && diffHours <= 24;
-                  const showRenduButton = isInvoiceCancellableOrRendable && diffHours > 24;
+                  const isInvoiceActionable = facture.statut_facture !== 'annulee' && facture.statut_facture !== 'retour_total';
 
 
                   return (
@@ -713,54 +739,40 @@ export default function Factures() {
                           }}
                           className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                           title="Gérer Paiement"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || (facture.montant_actuel_du <= 0 && facture.statut_facture === 'payee_integralement')}
-                          // Le bouton de paiement reste actif si paiement partiel même si montant dû est 0 pour permettre ajustement
+                          disabled={!isInvoiceActionable || (facture.montant_actuel_du <= 0 && facture.statut_facture === 'payee_integralement')}
                         >
                           <CurrencyDollarIcon className="h-4 w-4" />
                         </button>
 
-                        {/* Bouton Annuler (moins de 24h) - Ouvre la modale de retour */}
-                        {showCancelButton && (
+                        {/* NEW: Bouton Annuler Facture Complète */}
+                        {isInvoiceActionable && (
                           <button
                             onClick={() => {
-                              console.log('Frontend: Tentative d\'ouverture modale retour pour annulation (moins de 24h) pour facture:', facture);
-                              handleOpenReturnModal(facture);
+                              console.log('Frontend: Tentative d\'annulation complète pour facture:', facture.facture_id);
+                              handleCancelFullInvoice(facture.facture_id);
                             }}
                             className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
-                            title="Annuler Article (Retour en stock)"
-                            disabled={isReturningItem} // Utilise l'état de chargement global pour le retour
+                            title="Annuler Facture Complète"
+                            disabled={facture.statut_facture === 'payee_integralement'} // Disable if already fully paid, to prevent conflicts
                           >
                             <XMarkIcon className="h-4 w-4" />
                           </button>
                         )}
 
-                        {/* Bouton Rendu (plus de 24h) - Ouvre la modale de retour */}
-                        {showRenduButton && (
+                        {/* Bouton Gérer Retour (Défectueux) */}
+                        {isInvoiceActionable && (
                           <button
                             onClick={() => {
-                              console.log('Frontend: Tentative d\'ouverture modale retour pour rendu (plus de 24h) pour facture:', facture);
+                              console.log('Frontend: Tentative d\'ouverture modale retour pour facture:', facture);
                               handleOpenReturnModal(facture);
                             }}
-                            className="p-1 rounded-full text-orange-600 hover:bg-orange-100 transition"
-                            title="Marquer comme Rendu (Retour en stock)"
-                            disabled={isReturningItem} // Utilise l'état de chargement global pour le retour
+                            className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
+                            title="Gérer Retour (Défectueux)"
                           >
-                            <ArrowPathIcon className="h-4 w-4" />
+                            <ArrowUturnLeftIcon className="h-4 w-4" />
                           </button>
                         )}
 
-                        {/* Bouton Gérer Retour (toujours visible) */}
-                        <button
-                          onClick={() => {
-                            console.log('Frontend: Tentative d\'ouverture modale retour pour facture:', facture);
-                            handleOpenReturnModal(facture);
-                          }}
-                          className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
-                          title="Gérer Retour"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total'}
-                        >
-                          <ArrowUturnLeftIcon className="h-4 w-4" />
-                        </button>
                         <button
                           onClick={() => {
                             console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
