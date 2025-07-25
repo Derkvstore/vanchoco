@@ -143,8 +143,7 @@ export default function Benefices() {
                 <th className="py-3 px-4 text-left font-semibold uppercase">Date Vente</th>
                 <th className="py-3 px-4 text-center font-semibold uppercase">Statut Article</th> {/* Nouvelle colonne */}
                 <th className="py-3 px-4 text-right font-semibold uppercase">Montant Remboursé</th> {/* Nouvelle colonne */}
-                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Unitaire</th>
-                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total Ligne</th>
+                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
