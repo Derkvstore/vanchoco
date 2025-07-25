@@ -29,12 +29,7 @@ export default function Factures() {
   const [newPaymentTotal, setNewPaymentTotal] = useState(''); // Pour le montant total négocié
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Nouvel état de chargement
 
-  // Modale Annuler Facture
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false); // Nouvel état de chargement
-
-  // Modale Gérer Retour
+  // Modale Gérer Retour (utilisée maintenant par Annuler/Rendu aussi)
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [currentFactureDetails, setCurrentFactureDetails] = useState(null); // Détails complets de la facture pour les articles
   const [currentVenteItems, setCurrentVenteItems] = useState([]); // Articles de la vente liés à la facture
@@ -496,40 +491,6 @@ export default function Factures() {
     }
   };
 
-  const handleOpenCancelModal = (facture) => {
-    if (!facture || !facture.facture_id) {
-      console.error("Impossible d'ouvrir la modale d'annulation: Facture ou ID de facture manquant.", { facture });
-      setStatusMessage({ type: 'error', text: 'Impossible d\'annuler la facture: Facture invalide.' });
-      return;
-    }
-    setCurrentFacture(facture);
-    setCancelReason('');
-    setShowCancelModal(true);
-  };
-
-  const handleCancelInvoice = async () => {
-    if (!currentFacture || !currentFacture.facture_id || !cancelReason) {
-      setStatusMessage({ type: 'error', text: 'Veuillez fournir une raison d\'annulation et s\'assurer que la facture est liée.' });
-      return;
-    }
-    setIsCancellingInvoice(true); // Début du chargement
-    try {
-      // Appel à la route PUT /api/factures/:id/cancel
-      const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
-        raison_annulation: cancelReason
-      });
-      setStatusMessage({ type: 'success', text: response.data.message || 'Facture annulée avec succès.' });
-      fetchFactures();
-      setShowCancelModal(false);
-      setCancelReason('');
-    } catch (error) {
-      console.error('Erreur lors de l\'annulation de la facture:', error);
-      setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
-    } finally {
-      setIsCancellingInvoice(false); // Fin du chargement
-    }
-  };
-
   const handleOpenReturnModal = async (facture) => {
     if (!facture || !facture.facture_id) {
       console.error("Impossible d'ouvrir la modale de retour: Facture ou ID de facture manquant.", { facture });
@@ -758,31 +719,31 @@ export default function Factures() {
                           <CurrencyDollarIcon className="h-4 w-4" />
                         </button>
 
-                        {/* Bouton Annuler (moins de 24h) */}
+                        {/* Bouton Annuler (moins de 24h) - Ouvre la modale de retour */}
                         {showCancelButton && (
                           <button
                             onClick={() => {
-                              console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
-                              handleOpenCancelModal(facture);
+                              console.log('Frontend: Tentative d\'ouverture modale retour pour annulation (moins de 24h) pour facture:', facture);
+                              handleOpenReturnModal(facture);
                             }}
                             className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
-                            title="Annuler Facture"
-                            disabled={isCancellingInvoice} // Utilise l'état de chargement global pour l'annulation
+                            title="Annuler Article (Retour en stock)"
+                            disabled={isReturningItem} // Utilise l'état de chargement global pour le retour
                           >
                             <XMarkIcon className="h-4 w-4" />
                           </button>
                         )}
 
-                        {/* Bouton Rendu (plus de 24h) */}
+                        {/* Bouton Rendu (plus de 24h) - Ouvre la modale de retour */}
                         {showRenduButton && (
                           <button
                             onClick={() => {
-                              console.log('Frontend: Tentative d\'ouverture modale rendu pour facture:', facture);
-                              handleOpenCancelModal(facture); // Même fonction que l'annulation
+                              console.log('Frontend: Tentative d\'ouverture modale retour pour rendu (plus de 24h) pour facture:', facture);
+                              handleOpenReturnModal(facture);
                             }}
                             className="p-1 rounded-full text-orange-600 hover:bg-orange-100 transition"
-                            title="Marquer comme Rendu"
-                            disabled={isCancellingInvoice} // Utilise l'état de chargement global pour l'annulation
+                            title="Marquer comme Rendu (Retour en stock)"
+                            disabled={isReturningItem} // Utilise l'état de chargement global pour le retour
                           >
                             <ArrowPathIcon className="h-4 w-4" />
                           </button>
@@ -1051,42 +1012,7 @@ export default function Factures() {
         </div>
       )}
 
-      {/* Modal Annuler Facture */}
-      {showCancelModal && currentFacture && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Annuler Facture #{currentFacture.facture_id}</h3>
-            <p className="text-gray-700 mb-4">Êtes-vous sûr de vouloir annuler cette facture ? Tous les articles de la vente associée seront également annulés et les produits réactivés.</p>
-            <label htmlFor="cancelReason" className="block text-sm font-medium text-gray-700 mb-1">Raison de l'annulation:</label>
-            <textarea
-              id="cancelReason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-              rows="3"
-              required
-            ></textarea>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
-                disabled={isCancellingInvoice}
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleCancelInvoice}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
-                disabled={isCancellingInvoice}
-              >
-                {isCancellingInvoice ? 'Annulation...' : 'Confirmer Annulation'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Gérer Retour */}
+      {/* Modal Gérer Retour (utilisée par Annuler/Rendu aussi) */}
       {showReturnModal && currentFacture && currentFactureDetails && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full">
