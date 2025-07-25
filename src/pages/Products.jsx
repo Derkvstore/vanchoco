@@ -720,6 +720,7 @@ export default function Products() {
                 <th className="px-6 py-3">Modèle</th>
                 <th className="px-6 py-3">Stockage</th>
                 <th className="px-6 py-3">Type</th>
+                <th className="px-6 py-3">Type Carton</th>
                 <th className="px-6 py-3">IMEI</th>
                 <th className="px-6 py-3">Quantité</th>
                 <th className="px-6 py-3">Prix Achat</th>
@@ -739,10 +740,8 @@ export default function Products() {
                   <td className="px-6 py-4 font-medium text-gray-900">{p.marque}</td>
                   <td className="px-6 py-4 text-gray-700">{p.modele}</td>
                   <td className="px-6 py-4 text-gray-700">{p.stockage}</td>
-                  <td className="px-6 py-4 text-gray-700">
-                    {p.type}
-                    {p.type === "CARTON" && p.type_carton ? ` (${p.type_carton})` : ""}
-                  </td>
+                  <td className="px-6 py-4 text-gray-700">{p.type}</td>
+                  <td className="px-6 py-4 text-gray-700">{p.type_carton || '—'}</td>
                   <td className="px-6 py-4 text-gray-700">{p.imei}</td>
                   <td className="px-6 py-4 text-gray-700">{p.quantite}</td>
                   <td className="px-6 py-4 text-gray-700">
@@ -757,7 +756,7 @@ export default function Products() {
                   <td className="px-6 py-4 text-gray-700">
                     {p.date_ajout
                       ? new Date(p.date_ajout).toLocaleDateString('fr-FR', {
-                          year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' // ✅ MODIFIÉ : Ajout de l'heure et des minutes
+                          year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
                         })
                       : "N/A"}
                   </td>
