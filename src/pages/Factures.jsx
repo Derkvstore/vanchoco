@@ -1,201 +1,182 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios'; // Assurez-vous que axios est bien importé
 import {
-  PlusIcon, DocumentTextIcon, MagnifyingGlassIcon, TrashIcon,
-  CurrencyDollarIcon, XMarkIcon, PrinterIcon, ArrowUturnLeftIcon,
-  CheckCircleIcon, XCircleIcon, PlusCircleIcon, ArrowPathIcon // Ajout de ArrowPathIcon pour le bouton "Rendu"
+  DocumentTextIcon, MagnifyingGlassIcon, PlusIcon, PrinterIcon,
+  XMarkIcon, CheckCircleIcon, XCircleIcon, CurrencyDollarIcon, ArrowUturnLeftIcon,
+  TrashIcon, PlusCircleIcon
 } from '@heroicons/react/24/outline';
+import axios from 'axios';
 
 export default function Factures() {
   const [factures, setFactures] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Modale Créer Facture
+  // États pour la création de facture
   const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
   const [newInvoiceClientName, setNewInvoiceClientName] = useState('');
   const [newInvoiceClientPhone, setNewInvoiceClientPhone] = useState('');
   const [invoiceRows, setInvoiceRows] = useState([]);
-  const [newInvoicePayment, setNewInvoicePayment] = useState(0);
-  const [negotiatedPrice, setNegotiatedPrice] = useState(''); // Montant négocié optionnel
   const [createInvoiceError, setCreateInvoiceError] = useState('');
-  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false); // Nouvel état de chargement
-
-  // Modale Gérer Paiement
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [currentFacture, setCurrentFacture] = useState(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [newPaymentTotal, setNewPaymentTotal] = useState(''); // Pour le montant total négocié
-  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Nouvel état de chargement
-
-  // Modale Gérer Retour (utilisée maintenant par Annuler/Rendu aussi)
-  const [showReturnModal, setShowReturnModal] = useState(false);
-  const [currentFactureDetails, setCurrentFactureDetails] = useState(null); // Détails complets de la facture pour les articles
-  const [currentVenteItems, setCurrentVenteItems] = useState([]); // Articles de la vente liés à la facture
-  const [selectedReturnItem, setSelectedReturnItem] = useState(null);
-  const [returnReason, setReturnReason] = useState('');
-  const [returnAmount, setReturnAmount] = useState('');
-  const [isReturningItem, setIsReturningItem] = useState(false); // Nouvel état de chargement
-
-  // Données pour les datalists de la création de facture
+  const [newInvoicePayment, setNewInvoicePayment] = useState(0);
   const [allAvailableProducts, setAllAvailableProducts] = useState([]);
   const [allClients, setAllClients] = useState([]);
+  const [negotiatedPrice, setNegotiatedPrice] = useState(''); // État pour le prix négocié lors de la création
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false); // Nouvel état de chargement pour la création
 
-  // Refs pour les identifiants uniques des lignes de facture
-  const nextRowId = useRef(0);
+  // États pour les actions sur facture existante
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [currentFacture, setCurrentFacture] = useState(null);
+  const [currentFactureDetails, setCurrentFactureDetails] = useState(null); // Utilisé pour charger les articles de la facture dans la modale de retour
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [returnAmount, setReturnAmount] = useState('');
+  const [selectedReturnItem, setSelectedReturnItem] = useState(null);
+  const [currentVenteItems, setCurrentVenteItems] = useState([]); // Articles actifs de la facture pour la modale de retour
+  const [newPaymentTotal, setNewPaymentTotal] = useState(''); // NOUVEAU ÉTAT pour le montant total à négocier dans la modale de paiement
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // État de chargement pour la mise à jour du paiement
+  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false); // État de chargement pour l'annulation
+  const [isReturningItem, setIsReturningItem] = useState(false); // État de chargement pour le retour d'article
 
-  // --- Définition de l'URL de base du backend ---
+  // Définition de l'URL de l'API pour l'environnement Canvas
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
 
-  // Fonction utilitaire pour formater les montants en CFA
   const formatAmount = (amount) => {
     if (amount === null || amount === undefined || isNaN(parseFloat(amount))) {
       return '0 CFA';
     }
-    return `${Math.round(parseFloat(amount)).toLocaleString('fr-FR')} CFA`;
+    // Assure que le montant est arrondi à l'entier et formaté sans décimales
+    return Math.round(parseFloat(amount)).toLocaleString('fr-FR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }) + ' CFA';
   };
 
-  // Fonction utilitaire pour formater les dates
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-    return new Date(dateString).toLocaleDateString('fr-FR', options);
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
   };
 
-  // Calcule les totaux pour la création de facture
-  const calculateOverallTotals = useCallback(() => {
-    const subtotal = invoiceRows.reduce((sum, row) => sum + row.totalPrice, 0);
-    const finalTotal = negotiatedPrice !== '' && !isNaN(parseFloat(negotiatedPrice))
-                       ? parseFloat(negotiatedPrice)
-                       : subtotal;
-    const balance = finalTotal - parseFloat(newInvoicePayment || 0);
-    return { subtotal, finalTotal, balance };
-  }, [invoiceRows, negotiatedPrice, newInvoicePayment]);
-
-  const { subtotal: total, balance } = calculateOverallTotals();
-
-  // Dépendances pour le calcul du montant dû dans la modale de paiement
-  const currentPaymentModalBalanceDue = currentFacture && newPaymentTotal !== '' && paymentAmount !== ''
-    ? parseFloat(newPaymentTotal) - parseFloat(paymentAmount)
-    : (currentFacture ? (currentFacture.montant_original_facture - currentFacture.montant_paye_facture) : 0);
-
-
-  // --- Fetching Initial Data ---
-  const fetchFactures = useCallback(async () => {
+  const fetchFactures = async () => {
     setLoading(true);
+    setStatusMessage({ type: '', text: '' });
     try {
       const response = await axios.get(`${API_BASE_URL}/api/factures`);
+      console.log('Frontend: Données brutes des factures récupérées par /api/factures:', response.data);
       setFactures(response.data);
     } catch (error) {
+      console.error('Erreur lors du chargement des factures:', error);
       setStatusMessage({ type: 'error', text: `Erreur lors du chargement des factures: ${error.response?.data?.error || error.message}` });
     } finally {
       setLoading(false);
     }
-  }, [API_BASE_URL]);
+  };
 
-  const fetchAllAvailableProducts = useCallback(async () => {
+  const fetchAllAvailableProducts = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/products`);
-      // Filtrer les produits pour n'inclure que ceux qui sont 'active' et ont une quantité de 1
       setAllAvailableProducts(response.data.filter(p => p.status === 'active' && p.quantite === 1));
     } catch (error) {
       console.error('Erreur lors du chargement des produits disponibles:', error);
-      setStatusMessage({ type: 'error', text: `Erreur lors du chargement des produits: ${error.message}` });
+      setStatusMessage({ type: 'error', text: `Erreur lors du chargement des produits disponibles: ${error.response?.data?.error || error.message}` });
     }
-  }, [API_BASE_URL]);
+  };
 
-  const fetchAllClients = useCallback(async () => {
+  const fetchAllClients = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/api/clients`);
       setAllClients(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des clients:', error);
-      setStatusMessage({ type: 'error', text: `Erreur lors du chargement des clients: ${error.message}` });
     }
-  }, [API_BASE_URL]);
-
+  };
 
   useEffect(() => {
     fetchFactures();
     fetchAllAvailableProducts();
     fetchAllClients();
-  }, [fetchFactures, fetchAllAvailableProducts, fetchAllClients]);
+  }, []);
 
-  // --- Gestion Création Facture ---
+  const nextRowId = useRef(0);
 
   const handleAddRow = () => {
-    setInvoiceRows(prevRows => [...prevRows, {
-      id: nextRowId.current++,
-      selectedProduct: null,
-      productSearchTerm: '',
-      imeiInput: '', // Revert to single string input
-      imeiList: [], // List of validated IMEIs
-      quantity: 0,
-      unitPrice: '',
-      totalPrice: 0,
-      validationError: '', // General error for the row
-      purchasePrice: null // Store purchase price for validation
-    }]);
+    setInvoiceRows(prevRows => [
+      ...prevRows,
+      {
+        id: nextRowId.current++,
+        selectedProduct: null,
+        productSearchTerm: '',
+        imeiInput: '',
+        imeiList: [],
+        quantity: 0,
+        unitPrice: '',
+        purchasePrice: 0,
+        totalPrice: 0,
+        validationError: '',
+      }
+    ]);
+    setCreateInvoiceError('');
   };
 
   const handleRemoveRow = (idToRemove) => {
     setInvoiceRows(prevRows => prevRows.filter(row => row.id !== idToRemove));
+    setCreateInvoiceError('');
   };
 
   const handleClientNameChange = (e) => {
     const name = e.target.value;
     setNewInvoiceClientName(name);
-    const foundClient = allClients.find(client => client.nom === name);
-    if (foundClient) {
-      setNewInvoiceClientPhone(foundClient.telephone || '');
+    const matchedClient = allClients.find(client => client.nom === name);
+    if (matchedClient) {
+      setNewInvoiceClientPhone(matchedClient.telephone || '');
     } else {
       setNewInvoiceClientPhone('');
     }
+    setCreateInvoiceError('');
   };
 
-  const handleProductInputChange = (e, rowId) => {
-    const searchTerm = e.target.value;
-    setInvoiceRows(prevRows =>
-      prevRows.map(row =>
-        row.id === rowId ? { ...row, productSearchTerm: searchTerm, selectedProduct: null, imeiInput: '', imeiList: [], quantity: 0, unitPrice: '', totalPrice: 0, validationError: '' } : row
-      )
-    );
-  };
+  const handleProductInputChange = useCallback((e, rowId) => {
+    const input = e.target.value;
+    setInvoiceRows(prevRows => prevRows.map(row => {
+      if (row.id === rowId) {
+        return { ...row, productSearchTerm: input, validationError: '' };
+      }
+      return row;
+    }));
+  }, []);
 
-  const handleProductSelect = (e, rowId) => {
-    const selectedValue = e.target.value;
-    const foundProduct = allAvailableProducts.find(p =>
-      `${p.marque} ${p.modele} ${p.stockage} ${p.type} ${p.type_carton || ''}`.trim() === selectedValue
+  const handleProductSelect = useCallback((e, rowId) => {
+    const value = e.target.value;
+    const selectedProduct = allAvailableProducts.find(p =>
+      `${p.marque} ${p.modele} ${p.stockage} ${p.type} ${p.type_carton || ''}`.trim().toLowerCase() === value.toLowerCase()
     );
 
-    setInvoiceRows(prevRows =>
-      prevRows.map(row => {
-        if (row.id === rowId) {
-          const newRow = {
-            ...row,
-            selectedProduct: foundProduct || null,
-            productSearchTerm: selectedValue,
-            unitPrice: foundProduct ? foundProduct.prix_vente : '',
-            purchasePrice: foundProduct ? foundProduct.prix_achat : 0,
-            imeiInput: '', // Reset IMEI input for new product selection
-            imeiList: [],
-            quantity: 0,
-            totalPrice: 0,
-            validationError: foundProduct ? '' : 'Produit non valide ou non trouvé.'
-          };
-          // If a product is selected and there's existing IMEI input, re-validate
-          if (foundProduct && newRow.imeiInput) {
-            validateImeiAndCalculateQuantity(rowId, newRow.imeiInput, newRow.selectedProduct);
-          }
-          return newRow;
-        }
-        return row;
-      })
-    );
-  };
+    setInvoiceRows(prevRows => prevRows.map(row => {
+      if (row.id === rowId) {
+        return {
+          ...row,
+          selectedProduct: selectedProduct || null,
+          productSearchTerm: value,
+          unitPrice: selectedProduct ? selectedProduct.prix_vente : '',
+          purchasePrice: selectedProduct ? selectedProduct.prix_achat : 0,
+          imeiInput: '',
+          imeiList: [],
+          quantity: 0,
+          totalPrice: 0,
+          validationError: selectedProduct ? '' : 'Produit non valide ou non trouvé.'
+        };
+      }
+      return row;
+    }));
+    setCreateInvoiceError('');
+  }, [allAvailableProducts]);
 
-  // Reverted to single IMEI input change handler
+
   const handleImeiInputChange = useCallback((e, rowId) => {
     const input = e.target.value;
     setInvoiceRows(prevRows => prevRows.map(row => {
@@ -206,18 +187,23 @@ export default function Factures() {
     }));
   }, []);
 
-  // Updated validation logic for single IMEI input
   const validateImeiAndCalculateQuantity = useCallback(async (rowId) => {
-    const rowToValidate = invoiceRows.find(row => row.id === rowId);
-
-    if (!rowToValidate || !rowToValidate.selectedProduct) {
-      setInvoiceRows(prevRows => prevRows.map(row => {
+    setInvoiceRows(prevRows => prevRows.map(row => {
         if (row.id === rowId) {
-          return { ...row, validationError: 'Veuillez sélectionner un produit d\'abord.', imeiList: [], quantity: 0, totalPrice: 0 };
+            return { ...row, validationError: 'Validation en cours...' };
         }
         return row;
-      }));
-      return;
+    }));
+
+    const rowToValidate = invoiceRows.find(row => row.id === rowId);
+    if (!rowToValidate || !rowToValidate.selectedProduct) {
+        setInvoiceRows(prevRows => prevRows.map(row => {
+            if (row.id === rowId) {
+                return { ...row, validationError: 'Veuillez sélectionner un produit d\'abord.', imeiList: [], quantity: 0, totalPrice: 0 };
+            }
+            return row;
+        }));
+        return;
     }
 
     const imeiStrings = rowToValidate.imeiInput.split(/[\n,]/).map(s => s.trim()).filter(s => s !== '');
@@ -230,7 +216,6 @@ export default function Factures() {
             break;
         }
 
-        // Check uniqueness across all OTHER rows of the current invoice
         const isImeiUsedInOtherRow = invoiceRows.some(r =>
             r.id !== rowId && r.imeiList.includes(imei)
         );
@@ -250,7 +235,7 @@ export default function Factures() {
         );
 
         if (!productFound) {
-            currentError = `IMEI "${imei}" ne correspond pas au produit sélectionné ou n'est pas disponible en stock.`
+            currentError = `IMEI "${imei}" ne correspond pas au produit sélectionné ou n'est pas disponible en stock.`;
             break;
         }
         validImeis.push(imei);
@@ -277,19 +262,16 @@ export default function Factures() {
     const value = e.target.value;
     setInvoiceRows(prevRows => prevRows.map(row => {
       if (row.id === rowId) {
-        // Round the value to an integer before setting it in state
         const newUnitPrice = Math.round(parseFloat(value) || 0);
         let validationError = '';
 
-        // Validation: Prix de vente ne peut pas être inférieur au prix d'achat
-        if (row.selectedProduct && newUnitPrice <= row.purchasePrice) {
-          validationError = `Le prix de vente (${formatAmount(newUnitPrice)}) ne peut pas être inférieur ou égale au prix d'achat (${formatAmount(row.purchasePrice)}).`;
-        } else if (newUnitPrice <= 0 && row.quantity > 0) { // Si quantité > 0, le prix doit être > 0
+        if (row.selectedProduct && newUnitPrice < row.purchasePrice) {
+          validationError = `Le prix de vente (${formatAmount(newUnitPrice)}) ne peut pas être inférieur au prix d'achat (${formatAmount(row.purchasePrice)}).`;
+        } else if (newUnitPrice <= 0 && row.quantity > 0) {
           validationError = 'Le prix unitaire doit être positif.';
         }
 
         const newTotalPrice = row.quantity * newUnitPrice;
-        // Set unitPrice as the rounded number
         return { ...row, unitPrice: newUnitPrice, totalPrice: newTotalPrice, validationError: validationError };
       }
       return row;
@@ -297,15 +279,17 @@ export default function Factures() {
     setCreateInvoiceError('');
   };
 
-  const resetCreateInvoiceForm = () => {
-    setNewInvoiceClientName('');
-    setNewInvoiceClientPhone('');
-    setInvoiceRows([]);
-    setNewInvoicePayment(0);
-    setCreateInvoiceError('');
-    setNegotiatedPrice(''); // Réinitialiser le prix négocié
-    nextRowId.current = 0; // Reset row ID counter
-  };
+  const calculateOverallTotals = useCallback(() => {
+    const calculatedTotal = invoiceRows.reduce((sum, row) => sum + row.totalPrice, 0);
+    const finalTotal = negotiatedPrice !== '' && !isNaN(parseFloat(negotiatedPrice))
+                       ? parseFloat(negotiatedPrice)
+                       : calculatedTotal;
+    const paid = parseFloat(newInvoicePayment || 0);
+    const balance = finalTotal - paid;
+    return { total: finalTotal, paid, balance };
+  }, [invoiceRows, negotiatedPrice, newInvoicePayment]);
+
+  const { total, paid, balance } = calculateOverallTotals() || {};
 
   const handleConfirmCreateInvoice = async () => {
     console.log("--- Début de handleConfirmCreateInvoice ---");
@@ -340,13 +324,13 @@ export default function Factures() {
             console.log(`Validation échouée pour la ligne ${row.id}: Aucun produit sélectionné.`);
             break;
         }
-        if (row.imeiList.length === 0) { // Check valid IMEIs
+        if (row.imeiList.length === 0) {
             setCreateInvoiceError(`La ligne ${row.id} ne contient aucun IMEI valide.`);
             hasRowError = true;
             console.log(`Validation échouée pour la ligne ${row.id}: Aucun IMEI valide.`);
             break;
         }
-        if (row.validationError) { // Vérifie s'il y a une erreur de validation sur la ligne (y compris prix < prix_achat)
+        if (row.validationError) {
             setCreateInvoiceError(`Erreur de validation sur la ligne ${row.id}: ${row.validationError}`);
             hasRowError = true;
             console.log(`Validation échouée pour la ligne ${row.id}: Erreur de validation: ${row.validationError}`);
@@ -359,9 +343,7 @@ export default function Factures() {
     }
     console.log("4. Validation de toutes les lignes de facture passée.");
 
-
-    const { finalTotal } = calculateOverallTotals(); // Renommé 'total' en 'finalTotal' pour éviter la confusion
-    const finalPaid = parseFloat(newInvoicePayment); // Renommé 'paid' en 'finalPaid'
+    const { total: finalTotal, paid: finalPaid } = calculateOverallTotals();
     console.log("5. Totaux calculés:", { finalTotal, finalPaid });
 
     if (isNaN(finalPaid) || finalPaid < 0) {
@@ -373,7 +355,7 @@ export default function Factures() {
 
     const itemsToSendForVente = [];
     for (const row of invoiceRows) {
-        for (const imei of row.imeiList) { // Use imeiList (validated IMEIs)
+        for (const imei of row.imeiList) {
             const product = allAvailableProducts.find(p => p.imei === imei);
             if (product) {
                 itemsToSendForVente.push({
@@ -385,15 +367,15 @@ export default function Factures() {
                     type: product.type,
                     type_carton: product.type_carton,
                     prix_unitaire_vente: parseFloat(row.unitPrice),
-                    prix_unitaire_achat: product.prix_achat, // Assurez-vous que le prix d'achat est envoyé pour la validation backend
-                    quantite_vendue: 1 // Chaque IMEI est une quantité de 1
+                    prix_unitaire_achat: product.prix_achat,
+                    quantite_vendue: 1
                 });
             }
         }
     }
     console.log("7. Items à envoyer au backend pour la vente:", itemsToSendForVente);
 
-    setCreateInvoiceError(''); // Effacer les erreurs précédentes
+    setCreateInvoiceError('');
     setIsCreatingInvoice(true); // Début du chargement
     try {
       console.log("8. Tentative de création de la Vente...");
@@ -401,13 +383,13 @@ export default function Factures() {
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
         items: itemsToSendForVente,
-        montant_paye: finalPaid, // Montant payé pour la vente initiale
-        is_facture_speciale: true, // Flag pour distinguer des ventes régulières
+        montant_paye: finalPaid,
+        is_facture_speciale: true,
         montant_negocie: negotiatedPrice !== '' ? parseFloat(negotiatedPrice) : undefined
       });
       console.log("9. Réponse de la création de Vente:", venteResponse.data);
 
-      const venteId = venteResponse.data.vente_id; // Supposons que le backend retourne l'ID de la nouvelle vente
+      const venteId = venteResponse.data.vente_id;
 
       if (!venteId) {
         throw new Error("L'ID de la vente n'a pas été retourné par le backend après la création de la vente.");
@@ -416,15 +398,15 @@ export default function Factures() {
 
       console.log("11. Tentative de création de la Facture...");
       const factureResponse = await axios.post(`${API_BASE_URL}/api/factures`, {
-        vente_id: venteId, // Fourniture de l'ID de la vente
+        vente_id: venteId,
         nom_client: newInvoiceClientName,
         client_telephone: newInvoiceClientPhone,
         montant_paye_facture: finalPaid,
-        montant_original_facture: finalTotal, // Utilise le montant total final (négocié ou calculé)
+        montant_original_facture: finalTotal,
       });
 
       setStatusMessage({ type: 'success', text: factureResponse.data.message || 'Facture créée avec succès.' });
-      fetchFactures(); // Re-fetch uniquement les factures
+      fetchFactures();
       resetCreateInvoiceForm();
       setShowCreateInvoiceModal(false);
       console.log("12. Facture créée avec succès. Formulaire réinitialisé et modale fermée.");
@@ -438,18 +420,16 @@ export default function Factures() {
     }
   };
 
-  // Logique pour désactiver le bouton de confirmation de création de facture
-  const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) ||
-    invoiceRows.some(row =>
-      row.validationError || // General row error (e.g., product not selected or some IMEIs invalid)
-      !row.selectedProduct ||
-      row.imeiList.length === 0 || // No valid IMEIs
-      parseFloat(row.unitPrice) <= 0
-    ) ||
-    (negotiatedPrice && isNaN(parseFloat(negotiatedPrice))) || isCreatingInvoice;
+  const resetCreateInvoiceForm = () => {
+    setNewInvoiceClientName('');
+    setNewInvoiceClientPhone('');
+    setInvoiceRows([]);
+    setNewInvoicePayment(0);
+    setCreateInvoiceError('');
+    setNegotiatedPrice('');
+    nextRowId.current = 0; // Reset row ID counter
+  };
 
-
-  // --- Gestion Paiement ---
   const handleOpenPaymentModal = (facture) => {
     if (!facture || !facture.facture_id) {
       console.error("Impossible d'ouvrir la modale de paiement: Facture ou ID de facture manquant.", { facture });
@@ -458,7 +438,7 @@ export default function Factures() {
     }
     setCurrentFacture(facture);
     setPaymentAmount(facture.montant_paye_facture);
-    setNewPaymentTotal(facture.montant_original_facture); // Initialise le montant total pour la négociation
+    setNewPaymentTotal(facture.montant_original_facture);
     setShowPaymentModal(true);
   };
 
@@ -476,18 +456,55 @@ export default function Factures() {
     try {
       const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/payment`, {
         montant_paye_facture: parseFloat(paymentAmount),
-        new_total_amount: parseFloat(newPaymentTotal) // Envoie le nouveau montant total
+        new_total_amount: parseFloat(newPaymentTotal)
       });
       setStatusMessage({ type: 'success', text: response.data.message || 'Paiement et montant total mis à jour.' });
       fetchFactures();
       setShowPaymentModal(false);
       setPaymentAmount('');
-      setNewPaymentTotal(''); // Réinitialise l'état
+      setNewPaymentTotal('');
     } catch (error) {
       console.error('Erreur lors de la mise à jour du paiement:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
     } finally {
       setIsUpdatingPayment(false); // Fin du chargement
+    }
+  };
+
+  const currentPaymentModalBalanceDue = currentFacture
+    ? (parseFloat(newPaymentTotal || 0) - parseFloat(paymentAmount || 0))
+    : 0;
+
+  const handleOpenCancelModal = (facture) => {
+    if (!facture || !facture.facture_id) {
+      console.error("Impossible d'ouvrir la modale d'annulation: Facture ou ID de facture manquant.", { facture });
+      setStatusMessage({ type: 'error', text: 'Impossible d\'annuler la facture: Facture invalide.' });
+      return;
+    }
+    setCurrentFacture(facture);
+    setCancelReason('');
+    setShowCancelModal(true);
+  };
+
+  const handleCancelInvoice = async () => {
+    if (!currentFacture || !currentFacture.facture_id || !cancelReason) {
+      setStatusMessage({ type: 'error', text: 'Veuillez fournir une raison d\'annulation et s\'assurer que la facture est liée.' });
+      return;
+    }
+    setIsCancellingInvoice(true); // Début du chargement
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/cancel-full`, { // Utilise la route cancel-full
+        raison_annulation: cancelReason
+      });
+      setStatusMessage({ type: 'success', text: response.data.message || 'Facture annulée avec succès.' });
+      fetchFactures();
+      setShowCancelModal(false);
+      setCancelReason('');
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation de la facture:', error);
+      setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsCancellingInvoice(false); // Fin du chargement
     }
   };
 
@@ -502,11 +519,9 @@ export default function Factures() {
     setReturnAmount('');
     setSelectedReturnItem(null);
     try {
-        // Utilise facture.facture_id dans l'URL
         const response = await axios.get(`${API_BASE_URL}/api/factures/${facture.facture_id}`);
         setCurrentFactureDetails(response.data);
-        // Filtrer les articles actifs de la vente liée pour le retour
-        setCurrentVenteItems(response.data.articles_vendus.filter(item => item.statut_vente === 'actif')); // articles_vendus du backend
+        setCurrentVenteItems(response.data.articles_vendus.filter(item => item.statut_vente === 'actif'));
         setShowReturnModal(true);
     } catch (error) {
         setStatusMessage({ type: 'error', text: `Erreur lors du chargement des articles de la facture: ${error.response?.data?.error || error.message}` });
@@ -520,7 +535,6 @@ export default function Factures() {
     }
     setIsReturningItem(true); // Début du chargement
     try {
-      // Appel à la route POST /api/factures/:id/return-item
       const response = await axios.post(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/return-item`, {
         vente_item_id: selectedReturnItem.item_id,
         reason: returnReason,
@@ -541,39 +555,14 @@ export default function Factures() {
     }
   };
 
-  // NEW: Function to handle full invoice cancellation
-  const handleCancelFullInvoice = async (factureId) => {
-    // Remplacer window.confirm par une modale personnalisée si nécessaire
-    if (!confirm('Êtes-vous sûr de vouloir annuler cette facture entièrement? Tous les mobiles associés seront remis en stock.')) {
-      return;
-    }
-    setStatusMessage({ type: '', text: '' });
-    // Assume a loading state if needed
-    try {
-      // This API endpoint needs to be implemented in the backend
-      // It should:
-      // 1. Update the facture status to 'annulee'
-      // 2. Update all associated vente_items status to 'annule'
-      // 3. Update the corresponding products' status to 'active' and quantity to 1
-      const response = await axios.post(`${API_BASE_URL}/api/factures/${factureId}/cancel-full`);
-      setStatusMessage({ type: 'success', text: response.data.message || `Facture ${factureId} annulée entièrement et mobiles remis en stock.` });
-      fetchFactures(); // Refresh the list
-    } catch (error) {
-      console.error('Erreur lors de l\'annulation complète de la facture:', error);
-      setStatusMessage({ type: 'error', text: `Erreur lors de l'annulation complète: ${error.response?.data?.error || error.message}` });
-    }
-  };
-
-
   const handlePrintInvoice = async (factureId) => {
-    const factureToPrint = factures.find(f => f.facture_id === factureId); // Utilise facture_id
+    const factureToPrint = factures.find(f => f.facture_id === factureId);
     if (!factureToPrint || !factureToPrint.vente_id) {
       setStatusMessage({ type: 'error', text: 'Impossible d\'imprimer: ID de vente non trouvé pour cette facture.' });
       return;
     }
 
     try {
-      // Appel à la route /api/ventes/:id/pdf (qui utilise l'ID de la VENTE)
       const response = await axios.get(`${API_BASE_URL}/api/ventes/${factureToPrint.vente_id}/pdf`, {
         responseType: 'blob',
       });
@@ -587,29 +576,25 @@ export default function Factures() {
     }
   };
 
-  // MODIFIED: Filter invoices based on search term (removed hiding fully paid invoices)
   const filteredFactures = factures.filter(facture => {
     const searchLower = searchTerm.toLowerCase();
-
-    // Condition to hide fully paid invoices - REMOVED AS PER USER REQUEST
-    // const isFullyPaidAndSettled = facture.statut_facture === 'payee_integralement' && facture.montant_actuel_du <= 0;
-    // if (isFullyPaidAndSettled) {
-    //   return false; // Hide this invoice
-    // }
-
-    // Existing search term filter
     return (
-      (facture.facture_id && facture.facture_id.toString().includes(searchLower)) || // Utilise facture_id
+      (facture.facture_id && facture.facture_id.toString().includes(searchLower)) ||
       (facture.numero_facture && facture.numero_facture.toLowerCase().includes(searchLower)) ||
       (facture.client_nom && facture.client_nom.toLowerCase().includes(searchLower)) ||
       (facture.statut_facture && facture.statut_facture.toLowerCase().includes(searchLower)) ||
-      (facture.articles_vendus && facture.articles_vendus.some(item => // articles_vendus du backend
+      (facture.articles_vendus && facture.articles_vendus.some(item =>
         item.imei?.toLowerCase().includes(searchLower) ||
         item.marque?.toLowerCase().includes(searchLower) ||
         item.modele?.toLowerCase().includes(searchLower)
       ))
     );
   });
+
+  const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) ||
+    invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0) ||
+    (negotiatedPrice && isNaN(parseFloat(negotiatedPrice))) || isCreatingInvoice;
+
 
   return (
     <div className="p-4 max-w-full mx-auto font-sans bg-gray-50 rounded-xl shadow border border-gray-200">
@@ -679,7 +664,6 @@ export default function Factures() {
               <tbody className="divide-y divide-gray-100">
                 {filteredFactures.map((facture) => {
                   console.log('Frontend: Facture rendue dans le tableau:', facture);
-                  // Déterminer le texte du statut à afficher
                   let displayStatusText = facture.statut_facture.replace(/_/g, ' ');
                   let statusBgClass = '';
 
@@ -706,14 +690,13 @@ export default function Factures() {
                       break;
                     case 'retour_total':
                       displayStatusText = 'Retour total';
-                      statusBgClass = 'bg-gray-100 text-gray-800'; // Ou une autre couleur pour retour total
+                      statusBgClass = 'bg-gray-100 text-gray-800';
                       break;
                     default:
                       statusBgClass = 'bg-gray-100 text-gray-800';
                   }
 
                   const isInvoiceActionable = facture.statut_facture !== 'annulee' && facture.statut_facture !== 'retour_total';
-
 
                   return (
                     <tr key={facture.facture_id} className="hover:bg-blue-50">
@@ -743,42 +726,34 @@ export default function Factures() {
                         >
                           <CurrencyDollarIcon className="h-4 w-4" />
                         </button>
-
-                        {/* NEW: Bouton Annuler Facture Complète */}
-                        {isInvoiceActionable && (
-                          <button
-                            onClick={() => {
-                              console.log('Frontend: Tentative d\'annulation complète pour facture:', facture.facture_id);
-                              handleCancelFullInvoice(facture.facture_id);
-                            }}
-                            className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
-                            title="Annuler Facture Complète"
-                            disabled={facture.statut_facture === 'payee_integralement'} // Disable if already fully paid, to prevent conflicts
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
-                        )}
-
-                        {/* Bouton Gérer Retour (Défectueux) */}
-                        {isInvoiceActionable && (
-                          <button
-                            onClick={() => {
-                              console.log('Frontend: Tentative d\'ouverture modale retour pour facture:', facture);
-                              handleOpenReturnModal(facture);
-                            }}
-                            className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
-                            title="Gérer Retour (Défectueux)"
-                          >
-                            <ArrowUturnLeftIcon className="h-4 w-4" />
-                          </button>
-                        )}
-
+                        <button
+                          onClick={() => {
+                            console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
+                            handleOpenCancelModal(facture);
+                          }}
+                          className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
+                          title="Annuler Facture"
+                          disabled={!isInvoiceActionable}
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            console.log('Frontend: Tentative d\'ouverture modale retour pour facture:', facture);
+                            handleOpenReturnModal(facture);
+                          }}
+                          className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
+                          title="Gérer Retour (Défectueux)"
+                          disabled={!isInvoiceActionable}
+                        >
+                          <ArrowUturnLeftIcon className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => {
                             console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
                             handlePrintInvoice(facture.facture_id);
                           }}
-                          className="p-1 rounded-full text-blue-600 hover:text-blue-800 transition"
+                          className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                           title="Imprimer Facture"
                         >
                           <PrinterIcon className="h-4 w-4" />
@@ -839,10 +814,11 @@ export default function Factures() {
                 <thead className="bg-gray-100 sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left w-[20%]">Produit</th>
-                    <th className="px-3 py-2 text-left w-[40%]">IMEI(s)</th> {/* Updated header */}
+                    <th className="px-3 py-2 text-left w-[25%]">IMEI(s)</th>
+                    <th className="px-3 py-2 text-right w-[8%]">Qté</th>
                     <th className="px-3 py-2 text-right w-[15%]">P.Unit</th>
                     <th className="px-3 py-2 text-right w-[15%]">Montant</th>
-                    <th className="px-3 py-2 text-center w-[10%]">Actions</th>
+                    <th className="px-3 py-2 text-center w-[17%]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -869,19 +845,18 @@ export default function Factures() {
                         </datalist>
                       </td>
                       <td className="px-3 py-2">
-                        {/* Single textarea for IMEI input */}
                         <textarea
-                          placeholder="Entrez les IMEI (un par ligne ou séparés par des virgules)"
+                          placeholder="IMEI(s) séparés par virgule ou retour à la ligne"
                           value={row.imeiInput}
                           onChange={(e) => handleImeiInputChange(e, row.id)}
                           onBlur={() => validateImeiAndCalculateQuantity(row.id)}
-                          rows="3"
-                          className={`w-full border rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 ${
+                          className={`w-full border rounded-md px-2 py-1 text-xs h-24 resize-y focus:outline-none focus:ring-1 ${ // MODIFIÉ: h-24 pour plus de lignes
                             row.validationError ? 'border-red-400 focus:ring-red-400' : 'border-blue-300 focus:ring-blue-400'
                           }`}
                         ></textarea>
                         {row.validationError && <p className="text-red-500 text-[10px] mt-1">{row.validationError}</p>}
                       </td>
+                      <td className="px-3 py-2 text-right">{row.quantity}</td>
                       <td className="px-3 py-2">
                         <input
                           type="number"
@@ -1024,7 +999,42 @@ export default function Factures() {
         </div>
       )}
 
-      {/* Modal Gérer Retour (utilisée par Annuler/Rendu aussi) */}
+      {/* Modal Annuler Facture */}
+      {showCancelModal && currentFacture && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Annuler Facture #{currentFacture.facture_id}</h3>
+            <p className="text-gray-700 mb-4">Êtes-vous sûr de vouloir annuler cette facture ? Tous les articles de la vente associée seront également annulés et les produits réactivés.</p>
+            <label htmlFor="cancelReason" className="block text-sm font-medium text-gray-700 mb-1">Raison de l'annulation:</label>
+            <textarea
+              id="cancelReason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
+              rows="3"
+              required
+            ></textarea>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isCancellingInvoice}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleCancelInvoice}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                disabled={isCancellingInvoice}
+              >
+                {isCancellingInvoice ? 'Annulation...' : 'Confirmer Annulation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gérer Retour */}
       {showReturnModal && currentFacture && currentFactureDetails && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full">
