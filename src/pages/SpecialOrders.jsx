@@ -691,7 +691,7 @@ export default function SpecialOrders() {
                   type="text"
                   id="modele"
                   value={modele}
-                  onChange={(e) => setModele(e.target.value)} {/* CORRECTION ICI: setModèle -> setModele */}
+                  onChange={(e) => setModele(e.target.value)} // Correction: Utilise un commentaire JavaScript ici
                   required
                   className="mt-0.5 block w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
                 />
