@@ -70,12 +70,16 @@ export default function Benefices() {
   }, [selectedDate]); // Re-déclenche la récupération des données lorsque la date sélectionnée change
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'actif': return 'bg-green-100 text-green-800';
-      case 'annule': return 'bg-red-100 text-red-800';
-      case 'retourne': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+    // Correction: Vérifier si le statut est une chaîne avant d'appeler replace
+    if (typeof status === 'string') {
+      switch (status) {
+        case 'actif': return 'bg-green-100 text-green-800';
+        case 'annule': return 'bg-red-100 text-red-800';
+        case 'retourne': return 'bg-purple-100 text-purple-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
     }
+    return 'bg-gray-100 text-gray-800'; // Fallback si le statut n'est pas une chaîne
   };
 
   return (
@@ -143,7 +147,8 @@ export default function Benefices() {
                 <th className="py-3 px-4 text-left font-semibold uppercase">Date Vente</th>
                 <th className="py-3 px-4 text-center font-semibold uppercase">Statut Article</th> {/* Nouvelle colonne */}
                 <th className="py-3 px-4 text-right font-semibold uppercase">Montant Remboursé</th> {/* Nouvelle colonne */}
-                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total</th>
+                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Unitaire</th>
+                <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total Ligne</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -162,7 +167,7 @@ export default function Benefices() {
                   <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.date_vente)}</td>
                   <td className="py-3 px-4 text-center whitespace-nowrap">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${getStatusColor(item.statut_vente)}`}>
-                      {item.statut_vente.replace(/_/g, ' ')}
+                      {typeof item.statut_vente === 'string' ? item.statut_vente.replace(/_/g, ' ') : 'N/A'}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.montant_rembourse_item)}</td>
