@@ -1,6 +1,7 @@
 // src/pages/NouvelleVentes.jsx
 import React, { useState, useEffect } from 'react';
 import { PlusIcon, TrashIcon, ShoppingCartIcon, CheckCircleIcon, XCircleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import axios from 'axios'; // Importez axios pour la création de facture
 
 export default function NouvelleVente() {
   const [clients, setClients] = useState([]);
@@ -40,29 +41,23 @@ export default function NouvelleVente() {
     setStatusMessage({ type: '', text: '' });
     try {
       // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
-      const clientsRes = await fetch(`${API_BASE_URL}/api/clients`);
+      const clientsRes = await axios.get(`${API_BASE_URL}/api/clients`); // Utilisation d'axios
       // --- FIN DE LA MODIFICATION ---
-      if (!clientsRes.ok) {
-        const errorData = await clientsRes.json();
-        throw new Error(errorData.error || 'Échec de la récupération des clients.');
+      if (clientsRes.status !== 200) {
+        throw new Error(clientsRes.data.error || 'Échec de la récupération des clients.');
       }
-      const clientsData = await clientsRes.json();
-      setClients(clientsData);
+      setClients(clientsRes.data);
 
       // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
-      const productsRes = await fetch(`${API_BASE_URL}/api/products`);
+      const productsRes = await axios.get(`${API_BASE_URL}/api/products`); // Utilisation d'axios
       // --- FIN DE LA MODIFICATION ---
-      if (!productsRes.ok) {
-        const errorData = await productsRes.json();
-        throw new Error(errorData.error || 'Échec de la récupération des produits.');
+      if (productsRes.status !== 200) {
+        throw new Error(productsRes.data.error || 'Échec de la récupération des produits.');
       }
-      const productsData = await productsRes.json().then(data => {
-        // Filtrer les produits pour n'inclure que ceux qui sont 'active' et ont une quantité de 1 (mobiles par IMEI)
-        return data.filter(p => p.status === 'active' && p.quantite === 1).map(p => ({
-          ...p,
-          prix_vente: p.prix_vente !== undefined && p.prix_vente !== null ? parseFloat(p.prix_vente) : null
-        }));
-      });
+      const productsData = productsRes.data.filter(p => p.status === 'active' && p.quantite === 1).map(p => ({
+        ...p,
+        prix_vente: p.prix_vente !== undefined && p.prix_vente !== null ? parseFloat(p.prix_vente) : null
+      }));
       setProducts(productsData);
 
     } catch (error) {
@@ -177,6 +172,7 @@ export default function NouvelleVente() {
       }
 
       itemsToSend.push({
+        produit_id: foundProduct.id, // Assurez-vous d'envoyer l'ID du produit
         imei: item.imei,
         quantite_vendue: qtyRequested, // Fixed to 1 for IMEI-based products
         prix_unitaire_vente: parseFloat(foundProduct.prix_vente),
@@ -185,6 +181,7 @@ export default function NouvelleVente() {
         stockage: foundProduct.stockage,
         type: foundProduct.type,
         type_carton: foundProduct.type_carton || null,
+        prix_unitaire_achat: foundProduct.prix_achat, // Inclure le prix d'achat pour le backend
       });
     }
 
@@ -196,38 +193,51 @@ export default function NouvelleVente() {
     }
 
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL ---
-      const res = await fetch(`${API_BASE_URL}/api/ventes`, {
-      // --- FIN DE LA MODIFICATION ---
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nom_client: form.client_nom,
-          client_telephone: form.client_telephone,
-          items: itemsToSend,
-          montant_paye: parsedMontantPaye,
-          // IMPORTANT: Ne pas envoyer is_facture_speciale: true ici,
-          // laisser le backend utiliser sa valeur par défaut (false)
-        })
+      // 1. Créer la Vente
+      const venteRes = await axios.post(`${API_BASE_URL}/api/ventes`, {
+        nom_client: form.client_nom,
+        client_telephone: form.client_telephone,
+        items: itemsToSend,
+        montant_paye: parsedMontantPaye,
+        is_facture_speciale: false, // C'est une vente normale, pas une facture spéciale
+        montant_negocie: totalMontantCalcule // Le montant total de la vente est le montant négocié par défaut ici
       });
 
-      const data = await res.json();
-      if (res.ok) {
-        setStatusMessage({ type: 'success', text: 'Vente enregistrée avec succès.' });
-        // Reset form to initial state
-        setForm({
-          client_nom: '',
-          client_telephone: '',
-          items: [{ imei: '' }],
-          montant_paye: 0
-        });
-        fetchData(); // Re-fetch products to update stock quantities
-      } else {
-        setStatusMessage({ type: 'error', text: data.error || 'Erreur inconnue lors de la vente.' });
+      if (venteRes.status !== 201) { // Vérifiez le statut HTTP 201 pour la création
+        throw new Error(venteRes.data.error || 'Erreur inconnue lors de la création de la vente.');
       }
+
+      const venteId = venteRes.data.vente_id;
+      const totalVenteAmount = venteRes.data.montant_total; // Récupérer le montant total de la vente du backend
+
+      // 2. Créer la Facture associée
+      const factureData = {
+        vente_id: venteId,
+        nom_client: form.client_nom,
+        client_telephone: form.client_telephone,
+        montant_original_facture: totalVenteAmount, // Utiliser le montant total de la vente
+        montant_paye_facture: parsedMontantPaye,
+        // Le statut de la facture sera calculé par le backend en fonction des montants
+      };
+
+      const factureRes = await axios.post(`${API_BASE_URL}/api/factures`, factureData);
+
+      if (factureRes.status !== 201) { // Vérifiez le statut HTTP 201 pour la création
+        throw new Error(factureRes.data.error || 'Erreur inconnue lors de la création de la facture.');
+      }
+
+      setStatusMessage({ type: 'success', text: 'Vente et facture enregistrées avec succès.' });
+      // Reset form to initial state
+      setForm({
+        client_nom: '',
+        client_telephone: '',
+        items: [{ imei: '' }],
+        montant_paye: 0
+      });
+      fetchData(); // Re-fetch products to update stock quantities
     } catch (error) {
-      console.error('Erreur lors de la soumission de la vente:', error);
-      setStatusMessage({ type: 'error', text: 'Erreur de communication avec le serveur.' });
+      console.error('Erreur lors de la soumission de la vente ou de la facture:', error);
+      setStatusMessage({ type: 'error', text: `Erreur: ${error.message}` });
     } finally {
       setIsSubmitting(false);
     }
