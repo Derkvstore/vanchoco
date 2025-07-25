@@ -56,7 +56,7 @@ export default function SpecialOrders() {
   const [clientPhone, setClientPhone] = useState('');
   const [fournisseurName, setFournisseurName] = useState('');
   const [marque, setMarque] = useState('');
-  const [modele, setModele] = useState('');
+  const [modele, setModele] = useState(''); // Correctly declared
   const [stockage, setStockage] = useState('');
   const [type, setType] = useState('TELEPHONE');
   const [typeCarton, setTypeCarton] = useState('');
@@ -691,7 +691,7 @@ export default function SpecialOrders() {
                   type="text"
                   id="modele"
                   value={modele}
-                  onChange={(e) => setModèle(e.target.value)}
+                  onChange={(e) => setModele(e.target.value)} {/* CORRECTION ICI: setModèle -> setModele */}
                   required
                   className="mt-0.5 block w-full border border-gray-300 rounded-md shadow-sm p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500"
                 />
