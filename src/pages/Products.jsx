@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } => 'react';
 import {
   CubeIcon,
   MagnifyingGlassIcon,
@@ -287,7 +287,20 @@ export default function Products() {
         body: JSON.stringify(dataToSend),
       });
 
-      const responseData = await res.json();
+      // --- DÉBOGAGE AMÉLIORÉ ICI ---
+      const responseText = await res.text(); // Lire la réponse comme texte d'abord
+      let responseData;
+      try {
+          responseData = JSON.parse(responseText); // Tenter de parser en JSON
+      } catch (jsonError) {
+          console.error("Erreur de parsing JSON de la réponse:", jsonError);
+          console.error("Réponse brute du serveur:", responseText);
+          setFormError(`Erreur inattendue du serveur: ${responseText.substring(0, 100)}... (Voir console pour plus de détails)`);
+          setIsSubmitting(false);
+          return; // Arrêter ici si la réponse n'est pas un JSON valide
+      }
+      // --- FIN DÉBOGAGE AMÉLIORÉ ---
+
       console.log("Réponse du backend après soumission:", responseData); // LOG IMPORTANT
 
       if (res.ok) {
@@ -306,6 +319,9 @@ export default function Products() {
         } else if (responseData.constraint === "products_marque_modele_stockage_type_type_carton_imei_key") {
             errorMessage = "Cette combinaison de produit (Marque, Modèle, Stockage, Type, Qualité Carton, IMEI) existe déjà. Chaque produit doit être unique selon ces critères.";
         }
+        // --- LOG SUPPLÉMENTAIRE POUR DÉBOGAGE ---
+        console.error("Erreur détaillée du backend:", responseData);
+        // --- FIN LOG SUPPLÉMENTAIRE ---
         setFormError(errorMessage);
       }
     } catch (error) {
