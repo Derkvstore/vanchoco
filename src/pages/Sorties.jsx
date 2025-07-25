@@ -24,26 +24,29 @@ export default function Sorties() {
   const [newMontantPaye, setNewMontantPaye] = useState('');
   // État pour le nouveau montant total négocié
   const [newTotalAmountNegotiated, setNewTotalAmountNegotiated] = useState('');
-  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Nouvel état de chargement
 
-  // États pour la modale de confirmation personnalisée (utilisé pour Annuler, Retour, Rendu)
+  // États pour la modale de confirmation personnalisée
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalContent, setConfirmModalContent] = useState({ title: "", message: null });
   const [onConfirmAction, setOnConfirmAction] = useState(null);
   const [returnReasonInput, setReturnReasonInput] = useState('');
   const [modalError, setModalError] = useState('');
-  const [isConfirming, setIsConfirming] = useState(false); // État de chargement global pour la modale de confirmation
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const textareaRef = useRef(null);
 
-  // Définition de l'URL de base du backend
+  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
+  // Cette variable est injectée par Vite et Render.
+  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
+  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
+  // --- FIN DE LA MODIFICATION ---
 
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
     setOnConfirmAction(() => (currentReason) => action(currentReason));
     setModalError('');
-    setIsConfirming(false); // Réinitialiser l'état de confirmation
+    setIsConfirming(false);
     setReturnReasonInput('');
     setShowConfirmModal(true);
   };
@@ -54,7 +57,7 @@ export default function Sorties() {
     setOnConfirmAction(null);
     setReturnReasonInput('');
     setModalError('');
-    setIsConfirming(false); // Réinitialiser l'état de confirmation
+    setIsConfirming(false);
   };
 
   // Fonction de formatage FCFA
@@ -185,7 +188,7 @@ export default function Sorties() {
         return;
     }
 
-    if (parsedNewTotalAmountNegotiated < totalPrixAchatDeLaVente) {
+    if (parsedNewTotalAmountNegotiated <= totalPrixAchatDeLaVente) {
       setStatusMessage({ type: 'error', text: `Le nouveau montant total (${formatCFA(parsedNewTotalAmountNegotiated)}) ne peut pas être inférieur au prix d'achat total de la vente (${formatCFA(totalPrixAchatDeLaVente)}).` });
       return;
     }
@@ -200,7 +203,6 @@ export default function Sorties() {
         return;
     }
 
-    setIsUpdatingPayment(true); // Début du chargement
     try {
       const payload = { montant_paye: parseInt(parsedNewMontantPaye, 10) };
       if (parsedNewTotalAmountNegotiated !== currentSaleToEdit.montant_total) {
@@ -227,8 +229,6 @@ export default function Sorties() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour du paiement:', error);
       setStatusMessage({ type: 'error', text: 'Erreur de communication avec le serveur lors de la mise à jour du paiement.' });
-    } finally {
-      setIsUpdatingPayment(false); // Fin du chargement
     }
   };
 
@@ -472,7 +472,7 @@ export default function Sorties() {
           .no-print, .print-hidden { display: none !important; }
           #vite-error-overlay, #react-devtools-content { display: none !important; }
           .overflow-x-auto { overflow-x: visible !important; }
-          /* Ajusté la largeur minimale pour correspondre à la largeur du tableau */
+          /* Ajusté pour correspondre à la largeur minimale du tableau */
           .min-w-\\[1700px\\] { min-width: unset !important; }
           table { width: 100% !important; border-collapse: collapse; }
           th, td { border: 1px solid #ddd; padding: 8px; font-size: 9pt; white-space: normal; }
@@ -532,7 +532,7 @@ export default function Sorties() {
       ) : (
         <div className="overflow-x-auto">
           {/* Augmenté la largeur minimale pour accueillir toutes les colonnes */}
-          <div className="min-w-[1700px] table-container">
+          <div className="min-w-[1200px] table-container">
             <table className="table-auto w-full text-xs divide-y divide-gray-200">
               <thead className="bg-gray-100 text-gray-700 text-left">
                 <tr>
@@ -630,18 +630,16 @@ export default function Sorties() {
                             onClick={() => handleUpdatePaymentClick(data.vente_id, data.montant_paye_vente, data.montant_total_vente, data.total_prix_achat_de_la_vente)}
                             className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                             title="Modifier paiement de la vente"
-                            disabled={isUpdatingPayment} // Désactiver pendant le chargement
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
                         )}
-                        {/* Bouton Annuler Article (visible si l'article est actif ET si MOINS de 24h se sont écoulées) */}
-                        {data.statut_vente === 'actif' && !isOlderThan24Hours && ( // MODIFIÉ: Supprimé !data.is_special_sale_item
+                        {/* Bouton Annuler Article (visible si l'article est actif, si ce n'est PAS un article de facture spéciale ET si MOINS de 24h se sont écoulées) */}
+                        {!data.is_special_sale_item && data.statut_vente === 'actif' && !isOlderThan24Hours && (
                           <button
                             onClick={() => handleCancelItemClick(data)}
                             className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
                             title="Annuler cet article et remettre en stock"
-                            disabled={isConfirming} // Désactiver pendant le chargement
                           >
                             <ArrowUturnLeftIcon className="h-4 w-4" />
                           </button>
@@ -652,7 +650,6 @@ export default function Sorties() {
                             onClick={() => handleReturnItemClick(data)}
                             className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
                             title="Retourner ce mobile (défectueux)"
-                            disabled={isConfirming} // Désactiver pendant le chargement
                           >
                             <ArrowPathIcon className="h-4 w-4" />
                           </button>
@@ -663,7 +660,6 @@ export default function Sorties() {
                             onClick={() => handleMarkAsRenduClick(data)}
                             className="p-1 rounded-full text-cyan-600 hover:bg-cyan-100 transition"
                             title="Marquer comme Rendu"
-                            disabled={isConfirming} // Désactiver pendant le chargement
                           >
                             <ArrowDownTrayIcon className="h-4 w-4" />
                           </button>
@@ -720,16 +716,14 @@ export default function Sorties() {
                   setNewTotalAmountNegotiated('');
                 }}
                 className="px-6 py-3 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition duration-200 font-medium"
-                disabled={isUpdatingPayment} // Désactiver pendant le chargement
               >
                 Annuler
               </button>
               <button
                 onClick={handleConfirmUpdatePayment}
                 className="px-6 py-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition duration-200 font-medium shadow-md"
-                disabled={isUpdatingPayment} // Désactiver pendant le chargement
               >
-                {isUpdatingPayment ? 'Mise à jour...' : 'Confirmer la Mise à Jour'}
+                Confirmer la Mise à Jour
               </button>
             </div>
           </div>
@@ -742,7 +736,7 @@ export default function Sorties() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full relative z-[60] pointer-events-auto">
             <h3 className="text-lg font-bold text-gray-900 mb-4">{confirmModalContent.title}</h3>
             {typeof confirmModalContent.message === 'string' ? (
-              <p className="text-gray-700 mb-6">{confirmModalContent.message}</p>
+              <p className className="text-gray-700 mb-6">{confirmModalContent.message}</p>
             ) : (
               <div className="text-gray-700 mb-6">{confirmModalContent.message}</div>
             )}
