@@ -6,6 +6,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // Nouvel état pour le chargement du bouton
   const navigate = useNavigate();
 
   // --- MODIFICATION ICI : Utilisation de la variable d'environnement pour l'URL du backend ---
@@ -18,6 +19,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setIsLoggingIn(true); // Début du chargement
 
     try {
       // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
@@ -42,6 +44,8 @@ export default function Login() {
     } catch (err) {
       console.error('Erreur lors de la connexion frontend :', err);
       setMessage('❌ Erreur serveur');
+    } finally {
+      setIsLoggingIn(false); // Fin du chargement
     }
   };
 
@@ -95,8 +99,9 @@ export default function Login() {
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-3 rounded-full hover:bg-blue-700 transition"
+            disabled={isLoggingIn} // Désactiver le bouton pendant le chargement
           >
-            Se connecter
+            {isLoggingIn ? 'Connexion en cours...' : 'Se connecter'} {/* Texte dynamique du bouton */}
           </button>
         </form>
       </div>
