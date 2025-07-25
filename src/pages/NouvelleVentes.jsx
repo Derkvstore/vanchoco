@@ -207,26 +207,25 @@ export default function NouvelleVente() {
         throw new Error(venteRes.data.error || 'Erreur inconnue lors de la création de la vente.');
       }
 
-      const venteId = venteRes.data.vente_id;
-      const totalVenteAmount = venteRes.data.montant_total; // Récupérer le montant total de la vente du backend
+      // --- DÉBUT DE LA MODIFICATION ---
+      // Suppression de la création de la facture associée pour les ventes en détail
+      // const venteId = venteRes.data.vente_id;
+      // const totalVenteAmount = venteRes.data.montant_total; // Récupérer le montant total de la vente du backend
 
-      // 2. Créer la Facture associée
-      const factureData = {
-        vente_id: venteId,
-        nom_client: form.client_nom,
-        client_telephone: form.client_telephone,
-        montant_original_facture: totalVenteAmount, // Utiliser le montant total de la vente
-        montant_paye_facture: parsedMontantPaye,
-        // Le statut de la facture sera calculé par le backend en fonction des montants
-      };
+      // const factureData = {
+      //   vente_id: venteId,
+      //   nom_client: form.client_nom,
+      //   client_telephone: form.client_telephone,
+      //   montant_original_facture: totalVenteAmount, // Utiliser le montant total de la vente
+      //   montant_paye_facture: parsedMontantPaye,
+      // };
+      // const factureRes = await axios.post(`${API_BASE_URL}/api/factures`, factureData);
+      // if (factureRes.status !== 201) {
+      //   throw new Error(factureRes.data.error || 'Erreur inconnue lors de la création de la facture.');
+      // }
+      // --- FIN DE LA MODIFICATION ---
 
-      const factureRes = await axios.post(`${API_BASE_URL}/api/factures`, factureData);
-
-      if (factureRes.status !== 201) { // Vérifiez le statut HTTP 201 pour la création
-        throw new Error(factureRes.data.error || 'Erreur inconnue lors de la création de la facture.');
-      }
-
-      setStatusMessage({ type: 'success', text: 'Vente et facture enregistrées avec succès.' });
+      setStatusMessage({ type: 'success', text: 'Vente enregistrée avec succès.' }); // Message mis à jour
       // Reset form to initial state
       setForm({
         client_nom: '',
@@ -236,7 +235,7 @@ export default function NouvelleVente() {
       });
       fetchData(); // Re-fetch products to update stock quantities
     } catch (error) {
-      console.error('Erreur lors de la soumission de la vente ou de la facture:', error);
+      console.error('Erreur lors de la soumission de la vente:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.message}` });
     } finally {
       setIsSubmitting(false);
