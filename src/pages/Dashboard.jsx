@@ -34,7 +34,7 @@ import RetoursMobiles from './RetoursMobiles.jsx';
 import RemplacementsFournisseur from './RemplacementsFournisseur.jsx';
 import Recherche from './Recherche.jsx';
 import Fournisseurs from './Fournisseurs.jsx';
-//import Factures from './Factures.jsx';
+import Factures from './Factures.jsx';
 import Benefices from '../pages/Benefices.jsx';
 import SpecialOrders from '../pages/SpecialOrders.jsx'; // NOUVEL IMPORT : Le composant des commandes spéciales
 
@@ -91,8 +91,8 @@ export default function Dashboard() {
         return <Sorties />;
       case 'Recherche':
         return <Recherche />;
-     // case 'Factures':
-       // return <Factures />;
+      case 'Factures':
+        return <Factures />;
       case 'Bénéfices':
         return <Benefices />;
       case 'Achat': // MIS À JOUR : Le cas doit correspondre au nouveau nom
