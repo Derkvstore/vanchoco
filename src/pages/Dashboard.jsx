@@ -42,7 +42,7 @@ const sections = [
   { name: 'Produits', icon: CubeIcon },
   { name: 'Vente', icon: PlusCircleIcon },
   { name: 'Sorties', icon: ClockIcon },
-  //{ name: 'Factures', icon: DocumentTextIcon },
+  { name: 'Factures', icon: DocumentTextIcon },
   { name: 'Recherche', icon: MagnifyingGlassIcon },
   { name: 'Bénéfices', icon: CurrencyDollarIcon },
   { name: 'Dettes', icon: Bars3Icon },
