@@ -730,7 +730,7 @@ export default function Sorties() {
                 }`}
                 disabled={isUpdatingPayment}
               >
-                {isUpdatingPayment ? 'Confirmation...' : 'Confirmer la Mise à Jour'}
+                {isUpdatingPayment ? 'Mise à jour...' : 'Confirmer la Mise à Jour'}
               </button>
             </div>
           </div>
