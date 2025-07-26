@@ -633,8 +633,8 @@ export default function Sorties() {
                             <PencilIcon className="h-4 w-4" />
                           </button>
                         )}
-                        {/* Bouton Annuler Article (visible si l'article est actif, si ce n'est PAS un article de facture spéciale ET si MOINS de 24h se sont écoulées) */}
-                        {!data.is_special_sale_item && data.statut_vente === 'actif' && !isOlderThan24Hours && (
+                        {/* Bouton Annuler Article (visible si l'article est actif ET si MOINS de 24h se sont écoulées) */}
+                        {data.statut_vente === 'actif' && !isOlderThan24Hours && (
                           <button
                             onClick={() => handleCancelItemClick(data)}
                             className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
@@ -655,7 +655,7 @@ export default function Sorties() {
                             <ArrowPathIcon className="h-4 w-4" />
                           </button>
                         )}
-                        {/* Nouveau Bouton : Marquer comme Rendu (visible seulement si l'article est actif ET si PLUS de 24h se sont écoulées) */}
+                        {/* Nouveau Bouton : Marquer comme Rendu (visible si l'article est actif ET si PLUS de 24h se sont écoulées) */}
                         {data.statut_vente === 'actif' && isOlderThan24Hours && (
                           <button
                             onClick={() => handleMarkAsRenduClick(data)}
