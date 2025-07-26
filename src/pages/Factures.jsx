@@ -31,7 +31,7 @@ export default function Factures() {
 
   // Modale Annuler Facture
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
+  // Removed cancelReason state as it's no longer needed for sending to backend
   const [isCancellingInvoice, setIsCancellingInvoice] = useState(false); // Nouvel état de chargement
 
   // Modale Gérer Retour
@@ -504,25 +504,25 @@ export default function Factures() {
       return;
     }
     setCurrentFacture(facture);
-    setCancelReason('');
+    // Removed setCancelReason('');
     setShowCancelModal(true);
   };
 
   const handleCancelInvoice = async () => {
-    if (!currentFacture || !currentFacture.facture_id || !cancelReason) {
-      setStatusMessage({ type: 'error', text: 'Veuillez fournir une raison d\'annulation et s\'assurer que la facture est liée.' });
+    if (!currentFacture || !currentFacture.facture_id) { // Removed !cancelReason from validation
+      setStatusMessage({ type: 'error', text: 'Veuillez vous assurer que la facture est liée.' });
       return;
     }
     setIsCancellingInvoice(true); // Début du chargement
     try {
       // Appel à la route PUT /api/factures/:id/cancel
       const response = await axios.put(`${API_BASE_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
-        raison_annulation: cancelReason
+        // Removed raison_annulation from payload
       });
       setStatusMessage({ type: 'success', text: response.data.message || 'Facture annulée avec succès.' });
       fetchFactures();
       setShowCancelModal(false);
-      setCancelReason('');
+      // Removed setCancelReason('');
     } catch (error) {
       console.error('Erreur lors de l\'annulation de la facture:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
@@ -1076,15 +1076,7 @@ export default function Factures() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Annuler Facture #{currentFacture.facture_id}</h3>
             <p className="text-gray-700 mb-4">Êtes-vous sûr de vouloir annuler cette facture ? Tous les articles de la vente associée seront également annulés et les produits réactivés.</p>
-            <label htmlFor="cancelReason" className="block text-sm font-medium text-gray-700 mb-1">Raison de l'annulation:</label>
-            <textarea
-              id="cancelReason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
-              rows="3"
-              required
-            ></textarea>
+            {/* Removed raison_annulation textarea */}
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowCancelModal(false)}
@@ -1164,7 +1156,7 @@ export default function Factures() {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => { setShowReturnModal(false); setSelectedReturnItem(null); setReturnReason(''); setReturnAmount(''); setCurrentFactureDetails(null); }}
-                className="px-4 py-2 bg-gray-400 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
                 disabled={isReturningItem}
               >
                 Annuler
