@@ -164,11 +164,11 @@ export default function Accueil() {
 
 
             {/* Card for Mobiles Envoyés au Fournisseur */}
-            <div className="apple-card bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center border border-gray-100">
+            {/* <div className="apple-card bg-white rounded-xl p-6 flex flex-col items-center justify-center text-center border border-gray-100">
               <ArrowPathIcon className="h-10 w-10 text-orange-500 mb-3" />
               <p className="text-3xl font-bold text-gray-900">{dashboardStats.totalSentToSupplier}</p>
               <p className="text-md text-gray-600 mt-1">Envoyés Fournisseur</p>
-            </div>
+            </div> */}
           </div>
         )}
       </div>
