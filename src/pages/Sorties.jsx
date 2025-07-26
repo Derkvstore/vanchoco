@@ -516,7 +516,7 @@ export default function Sorties() {
       <div className="flex justify-end mb-4 no-print">
         <button
           onClick={handlePrint}
-          className="flex items-center px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200 font-medium"
+          className="flex items-center px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-300 transition duration-200 font-medium"
         >
           <PrinterIcon className="h-5 w-5 mr-2" />
           Imprimer la liste
@@ -524,9 +524,9 @@ export default function Sorties() {
       </div>
 
       {loading ? (
-        <p className="text-gray-500 text-center text-sm">Chargement des ventes...</p>
+        <p className="text-gray-600 text-center text-sm">Chargement des ventes...</p>
       ) : filteredVentes.length === 0 ? (
-        <p className="text-gray-500 text-center text-sm">Aucune vente trouvée correspondant à votre recherche.</p>
+        <p className="text-gray-500 text-center text-sm">Aucune ventes trouvée correspondant à votre recherche.</p>
       ) : (
         <div className="overflow-x-auto">
           {/* Augmenté la largeur minimale pour accueillir toutes les colonnes */}
@@ -604,7 +604,7 @@ export default function Sorties() {
                           ${data.statut_vente === 'retourne' ? 'bg-purple-100 text-purple-800' : ''}
                           ${data.statut_vente === 'remplace' ? 'bg-indigo-100 text-indigo-800' : ''}
                           ${data.statut_vente === 'rendu' ? 'bg-cyan-100 text-cyan-800' : ''}
-                          ${data.statut_vente === 'actif' && data.reste_a_payer_vente === 0 ? 'bg-green-100 text-green-800' : ''}
+                          ${data.statut_vente === 'actif' && data.reste_a_payer_vente <= 0 ? 'bg-green-100 text-green-800' : ''}
                           ${data.statut_vente === 'actif' && data.reste_a_payer_vente > 0 ? 'bg-blue-100 text-blue-800' : ''}
                         `}>
                           {data.statut_vente === 'annule'
@@ -615,7 +615,7 @@ export default function Sorties() {
                                 ? 'REMPLACÉ'
                                 : data.statut_vente === 'rendu'
                                   ? 'RENDU'
-                                  : data.reste_a_payer_vente === 0
+                                  : data.reste_a_payer_vente <= 0
                                     ? 'VENDU'
                                     : 'EN COURS'
                           }
@@ -680,7 +680,7 @@ export default function Sorties() {
       {showPaymentModal && currentSaleToEdit && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 no-print">
           <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">Modifier le Paiement de la Vente #{currentSaleToEdit.id}</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-6 text-center">Mise à jour du Paiement de la Vente #{currentSaleToEdit.id}</h3>
             <p className="text-gray-700 text-base mb-3">Montant Total Initial: <span className="font-semibold">{formatCFA(currentSaleToEdit.montant_total)}</span></p>
             <p className="text-gray-700 text-base mb-4">Montant Actuellement Payé: <span className="font-semibold">{formatCFA(currentSaleToEdit.montant_paye)}</span></p>
 
@@ -730,7 +730,7 @@ export default function Sorties() {
                 }`}
                 disabled={isUpdatingPayment}
               >
-                {isUpdatingPayment ? 'Mise à jour...' : 'Confirmer la Mise à Jour'}
+                {isUpdatingPayment ? 'Confirmation...' : 'Confirmer la Mise à Jour'}
               </button>
             </div>
           </div>
