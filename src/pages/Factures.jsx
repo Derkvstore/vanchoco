@@ -1164,7 +1164,7 @@ export default function Factures() {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => { setShowReturnModal(false); setSelectedReturnItem(null); setReturnReason(''); setReturnAmount(''); setCurrentFactureDetails(null); }}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                className="px-4 py-2 bg-gray-400 text-gray-800 rounded-md hover:bg-gray-400 transition"
                 disabled={isReturningItem}
               >
                 Annuler
