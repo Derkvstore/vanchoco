@@ -24,6 +24,7 @@ export default function Sorties() {
   const [newMontantPaye, setNewMontantPaye] = useState('');
   // État pour le nouveau montant total négocié
   const [newTotalAmountNegotiated, setNewTotalAmountNegotiated] = useState('');
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Loading state for payment update
 
   // États pour la modale de confirmation personnalisée
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -31,16 +32,11 @@ export default function Sorties() {
   const [onConfirmAction, setOnConfirmAction] = useState(null);
   const [returnReasonInput, setReturnReasonInput] = useState('');
   const [modalError, setModalError] = useState('');
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false); // Loading state for confirm modal actions
 
   const textareaRef = useRef(null);
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
-  // Cette variable est injectée par Vite et Render.
-  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
-  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
 
   const openConfirmModal = (title, message, action) => {
     setConfirmModalContent({ title, message });
@@ -174,32 +170,33 @@ export default function Sorties() {
   };
 
   const handleConfirmUpdatePayment = async () => {
+    setIsUpdatingPayment(true); // Set loading state
     const parsedNewMontantPaye = parseFloat(newMontantPaye);
     const parsedNewTotalAmountNegotiated = parseFloat(newTotalAmountNegotiated);
     const totalPrixAchatDeLaVente = currentSaleToEdit.total_prix_achat_de_la_vente;
 
     if (isNaN(parsedNewMontantPaye) || parsedNewMontantPaye < 0) {
       setStatusMessage({ type: 'error', text: 'Le nouveau montant payé est invalide.' });
+      setIsUpdatingPayment(false); // Reset loading state
       return;
     }
 
-    if (isNaN(parsedNewTotalAmountNegotiated) || parsedNewTotalAmountNegotiated <= 0) {
-        setStatusMessage({ type: 'error', text: 'Le nouveau montant total négocié est invalide ou négatif.' });
-        return;
-    }
-
-    if (parsedNewTotalAmountNegotiated <= totalPrixAchatDeLaVente) {
-      setStatusMessage({ type: 'error', text: `Le nouveau montant total (${formatCFA(parsedNewTotalAmountNegotiated)}) ne peut pas être inférieur au prix d'achat total de la vente (${formatCFA(totalPrixAchatDeLaVente)}).` });
+    // UPDATED LOGIC: New total amount negotiated cannot be less than OR EQUAL TO purchase price
+    if (isNaN(parsedNewTotalAmountNegotiated) || parsedNewTotalAmountNegotiated <= totalPrixAchatDeLaVente) {
+      setStatusMessage({ type: 'error', text: `Le nouveau montant total (${formatCFA(parsedNewTotalAmountNegotiated)}) ne peut pas être inférieur ou égal au prix d'achat total de la vente (${formatCFA(totalPrixAchatDeLaVente)}).` });
+      setIsUpdatingPayment(false); // Reset loading state
       return;
     }
 
     if (parsedNewMontantPaye > parsedNewTotalAmountNegotiated) {
       setStatusMessage({ type: 'error', text: `Le montant payé (${formatCFA(parsedNewMontantPaye)}) ne peut pas être supérieur au nouveau montant total de la vente (${formatCFA(parsedNewTotalAmountNegotiated)}).` });
+      setIsUpdatingPayment(false); // Reset loading state
       return;
     }
 
     if (parsedNewMontantPaye > 0 && parsedNewTotalAmountNegotiated < currentSaleToEdit.montant_paye) {
         setStatusMessage({ type: 'error', text: `Le nouveau montant total (${formatCFA(parsedNewTotalAmountNegotiated)}) ne peut pas être inférieur au montant déjà payé (${formatCFA(currentSaleToEdit.montant_paye)}).` });
+        setIsUpdatingPayment(false); // Reset loading state
         return;
     }
 
@@ -229,6 +226,8 @@ export default function Sorties() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour du paiement:', error);
       setStatusMessage({ type: 'error', text: 'Erreur de communication avec le serveur lors de la mise à jour du paiement.' });
+    } finally {
+      setIsUpdatingPayment(false); // Reset loading state
     }
   };
 
@@ -514,7 +513,6 @@ export default function Sorties() {
           />
         </div>
       </div>
-
       <div className="flex justify-end mb-4 no-print">
         <button
           onClick={handlePrint}
@@ -630,6 +628,7 @@ export default function Sorties() {
                             onClick={() => handleUpdatePaymentClick(data.vente_id, data.montant_paye_vente, data.montant_total_vente, data.total_prix_achat_de_la_vente)}
                             className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                             title="Modifier paiement de la vente"
+                            disabled={isUpdatingPayment} // Disable if already updating
                           >
                             <PencilIcon className="h-4 w-4" />
                           </button>
@@ -640,6 +639,7 @@ export default function Sorties() {
                             onClick={() => handleCancelItemClick(data)}
                             className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
                             title="Annuler cet article et remettre en stock"
+                            disabled={isConfirming} // Disable if another confirm action is ongoing
                           >
                             <ArrowUturnLeftIcon className="h-4 w-4" />
                           </button>
@@ -650,6 +650,7 @@ export default function Sorties() {
                             onClick={() => handleReturnItemClick(data)}
                             className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
                             title="Retourner ce mobile (défectueux)"
+                            disabled={isConfirming} // Disable if another confirm action is ongoing
                           >
                             <ArrowPathIcon className="h-4 w-4" />
                           </button>
@@ -660,6 +661,7 @@ export default function Sorties() {
                             onClick={() => handleMarkAsRenduClick(data)}
                             className="p-1 rounded-full text-cyan-600 hover:bg-cyan-100 transition"
                             title="Marquer comme Rendu"
+                            disabled={isConfirming} // Disable if another confirm action is ongoing
                           >
                             <ArrowDownTrayIcon className="h-4 w-4" />
                           </button>
@@ -714,16 +716,21 @@ export default function Sorties() {
                 onClick={() => {
                   setShowPaymentModal(false);
                   setNewTotalAmountNegotiated('');
+                  setIsUpdatingPayment(false); // Ensure loading state is reset on cancel
                 }}
                 className="px-6 py-3 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition duration-200 font-medium"
+                disabled={isUpdatingPayment}
               >
                 Annuler
               </button>
               <button
                 onClick={handleConfirmUpdatePayment}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition duration-200 font-medium shadow-md"
+                className={`px-6 py-3 rounded-full font-medium shadow-md ${
+                  isUpdatingPayment ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
+                disabled={isUpdatingPayment}
               >
-                Confirmer la Mise à Jour
+                {isUpdatingPayment ? 'Confirmation...' : 'Confirmer la Mise à Jour'}
               </button>
             </div>
           </div>
@@ -736,7 +743,7 @@ export default function Sorties() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full relative z-[60] pointer-events-auto">
             <h3 className="text-lg font-bold text-gray-900 mb-4">{confirmModalContent.title}</h3>
             {typeof confirmModalContent.message === 'string' ? (
-              <p className className="text-gray-700 mb-6">{confirmModalContent.message}</p>
+              <p className="text-gray-700 mb-6">{confirmModalContent.message}</p>
             ) : (
               <div className="text-gray-700 mb-6">{confirmModalContent.message}</div>
             )}
