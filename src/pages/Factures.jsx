@@ -726,29 +726,88 @@ export default function Factures() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-center space-x-1">
-                        <button
-                          onClick={() => {
-                            console.log('Frontend: Tentative d\'ouverture modale paiement pour facture:', facture);
-                            handleOpenPaymentModal(facture);
-                          }}
-                          className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
-                          title="Gérer Paiement"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || (facture.montant_actuel_du <= 0 && facture.statut_facture !== 'paiement_partiel') || isUpdatingPayment}
-                          // Le bouton de paiement reste actif si paiement partiel même si montant dû est 0 pour permettre ajustement
-                        >
-                          <CurrencyDollarIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
-                            handleOpenCancelModal(facture);
-                          }}
-                          className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
-                          title="Annuler Facture"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || isCancellingInvoice}
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </button>
+                        {/* Boutons pour les statuts 'creee' et 'paiement_partiel' */}
+                        {(facture.statut_facture === 'creee' || facture.statut_facture === 'paiement_partiel') && (
+                          <>
+                            <button
+                              onClick={() => {
+                                console.log('Frontend: Tentative d\'ouverture modale paiement pour facture:', facture);
+                                handleOpenPaymentModal(facture);
+                              }}
+                              className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
+                              title="Gérer Paiement"
+                              disabled={isUpdatingPayment}
+                            >
+                              <CurrencyDollarIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
+                                handleOpenCancelModal(facture);
+                              }}
+                              className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
+                              title="Annuler Facture"
+                              disabled={isCancellingInvoice}
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
+                                handlePrintInvoice(facture.facture_id);
+                              }}
+                              className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
+                              title="Imprimer Facture"
+                              disabled={isPrintingInvoice}
+                            >
+                              <PrinterIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Boutons pour le statut 'payee_integralement' */}
+                        {facture.statut_facture === 'payee_integralement' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                console.log('Frontend: Tentative d\'ouverture modale annulation pour facture:', facture);
+                                handleOpenCancelModal(facture);
+                              }}
+                              className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
+                              title="Annuler Facture"
+                              disabled={isCancellingInvoice}
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
+                                handlePrintInvoice(facture.facture_id);
+                              }}
+                              className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
+                              title="Imprimer Facture"
+                              disabled={isPrintingInvoice}
+                            >
+                              <PrinterIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Bouton pour le statut 'annulee' et 'retour_total'/'retour_partiel' */}
+                        {(facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || facture.statut_facture === 'retour_partiel') && (
+                          <button
+                            onClick={() => {
+                              console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
+                              handlePrintInvoice(facture.facture_id);
+                            }}
+                            className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
+                            title="Imprimer Facture"
+                            disabled={isPrintingInvoice}
+                          >
+                            <PrinterIcon className="h-4 w-4" />
+                          </button>
+                        )}
+
                         {/* Bouton "Gérer Retour" commenté pour le moment
                         <button
                           onClick={() => {
@@ -762,17 +821,6 @@ export default function Factures() {
                           <ArrowUturnLeftIcon className="h-4 w-4" />
                         </button>
                         */}
-                        <button
-                          onClick={() => {
-                            console.log('Frontend: Tentative d\'impression pour facture ID:', facture.facture_id, 'Vente ID:', facture.vente_id);
-                            handlePrintInvoice(facture.facture_id);
-                          }}
-                          className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
-                          title="Imprimer Facture"
-                          disabled={isPrintingInvoice}
-                        >
-                          <PrinterIcon className="h-4 w-4" />
-                        </button>
                       </td>
                     </tr>
                   );
