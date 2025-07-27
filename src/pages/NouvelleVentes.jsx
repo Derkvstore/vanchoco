@@ -378,14 +378,14 @@ export default function NouvelleVente() {
               </div>
             );
           })}
-          <button
+          {/* <button
             type="button"
             onClick={handleAddItem}
             className="mt-4 flex items-center px-4 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-200 text-sm font-medium shadow-md"
           >
             <PlusIcon className="h-4 w-4 mr-1" />
             Ajouter un article
-          </button>
+          </button> */}
         </div>
 
         <div className="text-right text-2xl font-bold text-gray-800 pt-4 border-t border-gray-200">
