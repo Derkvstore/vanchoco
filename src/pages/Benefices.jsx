@@ -1,3 +1,4 @@
+// src/pages/Benefices.jsx
 import React, { useState, useEffect } from 'react';
 import { CurrencyDollarIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -7,9 +8,6 @@ export default function Benefices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState(''); // État pour la date sélectionnée
-
-  // Définition de l'URL de l'API pour l'environnement Canvas
-  const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
 
   // Fonction utilitaire pour formater les montants en CFA
   const formatCFA = (amount) => {
@@ -44,7 +42,8 @@ export default function Benefices() {
     setLoading(true);
     setError(null);
     try {
-      let url = `${API_BASE_URL}/api/benefices`;
+      // MODIFICATION ICI : Utilisation de VITE_APP_BACKEND_URL
+      let url = `${import.meta.env.VITE_APP_BACKEND_URL}/api/benefices`;
       if (selectedDate) {
         url += `?date=${selectedDate}`; // Ajoute le paramètre de date si une date est sélectionnée
       }
@@ -68,19 +67,6 @@ export default function Benefices() {
   useEffect(() => {
     fetchBenefices();
   }, [selectedDate]); // Re-déclenche la récupération des données lorsque la date sélectionnée change
-
-  const getStatusColor = (status) => {
-    // Correction: Vérifier si le statut est une chaîne avant d'appeler replace
-    if (typeof status === 'string') {
-      switch (status) {
-        case 'actif': return 'bg-green-100 text-green-800';
-        case 'annule': return 'bg-red-100 text-red-800';
-        case 'retourne': return 'bg-purple-100 text-purple-800';
-        default: return 'bg-gray-100 text-gray-800';
-      }
-    }
-    return 'bg-gray-100 text-gray-800'; // Fallback si le statut n'est pas une chaîne
-  };
 
   return (
     <div className="p-8 font-sans bg-gray-50 rounded-3xl shadow-xl border border-gray-100">
@@ -142,11 +128,9 @@ export default function Benefices() {
                 <th className="py-3 px-4 text-left font-semibold uppercase">Type Carton</th>
                 <th className="py-3 px-4 text-left font-semibold uppercase">IMEI</th>
                 <th className="py-3 px-4 text-right font-semibold uppercase">Prix Achat</th>
-                <th className="py-3 px-4 text-right font-semibold uppercase">Prix Vente Négocié</th>
+                <th className="py-3 px-4 text-right font-semibold uppercase">Prix Vente</th>
                 <th className="py-3 px-4 text-right font-semibold uppercase">Qté</th>
                 <th className="py-3 px-4 text-left font-semibold uppercase">Date Vente</th>
-                <th className="py-3 px-4 text-center font-semibold uppercase">Statut Article</th> {/* Nouvelle colonne */}
-                <th className="py-3 px-4 text-right font-semibold uppercase">Montant Remboursé</th> {/* Nouvelle colonne */}
                 <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Unitaire</th>
                 <th className="py-3 px-4 text-right font-semibold uppercase">Bénéfice Total Ligne</th>
               </tr>
@@ -160,17 +144,9 @@ export default function Benefices() {
                   <td className="py-3 px-4 whitespace-nowrap">{item.type_carton || 'N/A'}</td>
                   <td className="py-3 px-4 whitespace-nowrap">{item.imei}</td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.prix_unitaire_achat)}</td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">
-                    {formatCFA(item.quantite_vendue > 0 ? item.proportional_revenue / item.quantite_vendue : 0)}
-                  </td>
+                  <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.prix_unitaire_vente)}</td>
                   <td className="py-3 px-4 text-right whitespace-nowrap">{item.quantite_vendue}</td>
                   <td className="py-3 px-4 whitespace-nowrap">{formatDate(item.date_vente)}</td>
-                  <td className="py-3 px-4 text-center whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${getStatusColor(item.statut_vente)}`}>
-                      {typeof item.statut_vente === 'string' ? item.statut_vente.replace(/_/g, ' ') : 'N/A'}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-right whitespace-nowrap">{formatCFA(item.montant_rembourse_item)}</td>
                   <td className="py-3 px-4 text-right whitespace-nowrap font-medium text-green-700">
                     {formatCFA(item.benefice_unitaire_produit)}
                   </td>
