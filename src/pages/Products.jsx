@@ -249,7 +249,7 @@ export default function Products() {
       // --- NOUVELLE VÉRIFICATION : Détecter les doublons DANS l'entrée IMEI ---
       const uniqueImeis = new Set(imeiInput);
       if (uniqueImeis.size !== imeiInput.length) {
-        setFormError("Des IMEIs dupliqués ont été détectés dans votre liste. Chaque IMEI doit être unique.");
+        setFormError("Des IMEI dupliqués ont été détectés dans votre liste. Chaque IMEI doit être unique.");
         setIsSubmitting(false);
         return;
       }
