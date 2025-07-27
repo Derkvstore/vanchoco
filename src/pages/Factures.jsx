@@ -8,7 +8,7 @@ import axios from 'axios';
 
 export default function Factures() {
   const [factures, setFactures] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Chargement initial des factures
   const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -22,6 +22,7 @@ export default function Factures() {
   const [allAvailableProducts, setAllAvailableProducts] = useState([]);
   const [allClients, setAllClients] = useState([]);
   const [negotiatedPrice, setNegotiatedPrice] = useState(''); // État pour le prix négocié lors de la création
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false); // Nouveau loading state pour la création
 
   // États pour les actions sur facture existante
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -36,9 +37,13 @@ export default function Factures() {
   const [selectedReturnItem, setSelectedReturnItem] = useState(null);
   const [currentVenteItems, setCurrentVenteItems] = useState([]); // Articles actifs de la facture pour la modale de retour
   const [newPaymentTotal, setNewPaymentTotal] = useState(''); // NOUVEAU ÉTAT pour le montant total à négocier dans la modale de paiement
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false); // Nouveau loading state pour la mise à jour paiement
+  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false); // Nouveau loading state pour l'annulation
+  const [isReturningItem, setIsReturningItem] = useState(false); // Nouveau loading state pour le retour
+  const [isPrintingInvoice, setIsPrintingInvoice] = useState(false); // Nouveau loading state pour l'impression
+
 
   // Définition de l'URL de l'API pour l'environnement Canvas
-  // MODIFICATION ICI : Utilisation de VITE_APP_BACKEND_URL
   const API_URL = import.meta.env.VITE_APP_BACKEND_URL;
 
   const formatAmount = (amount) => {
@@ -375,6 +380,7 @@ export default function Factures() {
     console.log("7. Items à envoyer au backend pour la vente:", itemsToSendForVente);
 
     setCreateInvoiceError(''); // Clear previous errors
+    setIsCreatingInvoice(true); // Début du chargement pour la création
     try {
       console.log("8. Tentative de création de la Vente...");
       const venteResponse = await axios.post(`${API_URL}/api/ventes`, {
@@ -413,6 +419,7 @@ export default function Factures() {
       setCreateInvoiceError(`Erreur: ${error.response?.data?.error || error.message}`);
       console.log("13. Création de facture échouée dans le bloc catch. Message d'erreur défini.");
     } finally {
+      setIsCreatingInvoice(false); // Fin du chargement pour la création
       console.log("--- Fin de handleConfirmCreateInvoice ---");
     }
   };
@@ -448,6 +455,7 @@ export default function Factures() {
         return;
     }
 
+    setIsUpdatingPayment(true); // Début du chargement pour la mise à jour paiement
     try {
       const response = await axios.put(`${API_URL}/api/factures/${currentFacture.facture_id}/payment`, {
         montant_paye_facture: parseFloat(paymentAmount),
@@ -461,6 +469,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour du paiement:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsUpdatingPayment(false); // Fin du chargement pour la mise à jour paiement
     }
   };
 
@@ -485,6 +495,7 @@ export default function Factures() {
       setStatusMessage({ type: 'error', text: 'Veuillez fournir une raison d\'annulation et s\'assurer que la facture est liée.' });
       return;
     }
+    setIsCancellingInvoice(true); // Début du chargement pour l'annulation
     try {
       // Appel à la route PUT /api/factures/:id/cancel
       const response = await axios.put(`${API_URL}/api/factures/${currentFacture.facture_id}/cancel`, {
@@ -497,6 +508,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors de l\'annulation de la facture:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsCancellingInvoice(false); // Fin du chargement pour l'annulation
     }
   };
 
@@ -527,6 +540,7 @@ export default function Factures() {
       setStatusMessage({ type: 'error', text: 'Données de retour incomplètes ou invalides.' });
       return;
     }
+    setIsReturningItem(true); // Début du chargement pour le retour
     try {
       // Appel à la route POST /api/factures/:id/return-item
       const response = await axios.post(`${API_URL}/api/factures/${currentFacture.facture_id}/return-item`, {
@@ -544,6 +558,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors du traitement du retour:', error);
       setStatusMessage({ type: 'error', text: `Erreur: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsReturningItem(false); // Fin du chargement pour le retour
     }
   };
 
@@ -554,6 +570,7 @@ export default function Factures() {
       return;
     }
 
+    setIsPrintingInvoice(true); // Début du chargement pour l'impression
     try {
       // Appel à la route /api/ventes/:id/pdf (qui utilise l'ID de la VENTE)
       const response = await axios.get(`${API_URL}/api/ventes/${factureToPrint.vente_id}/pdf`, {
@@ -566,6 +583,8 @@ export default function Factures() {
     } catch (error) {
       console.error('Erreur lors de l\'impression de la facture:', error);
       setStatusMessage({ type: 'error', text: `Erreur lors de la génération du PDF: ${error.response?.data?.error || error.message}` });
+    } finally {
+      setIsPrintingInvoice(false); // Fin du chargement pour l'impression
     }
   };
 
@@ -585,7 +604,7 @@ export default function Factures() {
   });
 
   // Logique pour désactiver le bouton de confirmation de création de facture
-  const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) || invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0);
+  const isConfirmButtonDisabled = !newInvoiceClientName.trim() || invoiceRows.length === 0 || isNaN(parseFloat(newInvoicePayment)) || invoiceRows.some(row => row.validationError || !row.selectedProduct || row.imeiList.length === 0 || parseFloat(row.unitPrice) <= 0) || isCreatingInvoice;
   console.log("État du bouton Confirmer Facture (disabled):", isConfirmButtonDisabled);
 
 
@@ -714,7 +733,7 @@ export default function Factures() {
                           }}
                           className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                           title="Gérer Paiement"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || (facture.montant_actuel_du <= 0 && facture.statut_facture !== 'paiement_partiel')}
+                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || (facture.montant_actuel_du <= 0 && facture.statut_facture !== 'paiement_partiel') || isUpdatingPayment}
                           // Le bouton de paiement reste actif si paiement partiel même si montant dû est 0 pour permettre ajustement
                         >
                           <CurrencyDollarIcon className="h-4 w-4" />
@@ -726,7 +745,7 @@ export default function Factures() {
                           }}
                           className="p-1 rounded-full text-red-600 hover:bg-red-100 transition"
                           title="Annuler Facture"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total'}
+                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || isCancellingInvoice}
                         >
                           <XMarkIcon className="h-4 w-4" />
                         </button>
@@ -738,7 +757,7 @@ export default function Factures() {
                           }}
                           className="p-1 rounded-full text-purple-600 hover:bg-purple-100 transition"
                           title="Gérer Retour"
-                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total'}
+                          disabled={facture.statut_facture === 'annulee' || facture.statut_facture === 'retour_total' || isReturningItem}
                         >
                           <ArrowUturnLeftIcon className="h-4 w-4" />
                         </button>
@@ -750,6 +769,7 @@ export default function Factures() {
                           }}
                           className="p-1 rounded-full text-blue-600 hover:bg-blue-100 transition"
                           title="Imprimer Facture"
+                          disabled={isPrintingInvoice}
                         >
                           <PrinterIcon className="h-4 w-4" />
                         </button>
@@ -923,6 +943,7 @@ export default function Factures() {
                 type="button"
                 onClick={() => { setShowCreateInvoiceModal(false); resetCreateInvoiceForm(); }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isCreatingInvoice} // Désactiver pendant le chargement
               >
                 Annuler
               </button>
@@ -932,7 +953,7 @@ export default function Factures() {
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 disabled={isConfirmButtonDisabled}
               >
-                Confirmer Facture
+                {isCreatingInvoice ? 'Création...' : 'Confirmer Facture'}
               </button>
             </div>
           </div>
@@ -956,6 +977,7 @@ export default function Factures() {
               className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
               step="1" // MODIFIÉ: step="1" pour les entiers
               min="0"
+              disabled={isUpdatingPayment} // Désactiver pendant le chargement
             />
 
             <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1">Nouveau Montant Payé:</label>
@@ -968,6 +990,7 @@ export default function Factures() {
               step="1" // MODIFIÉ: step="1" pour les entiers
               min="0"
               max={newPaymentTotal} // Max est le nouveau montant total
+              disabled={isUpdatingPayment} // Désactiver pendant le chargement
             />
             <p className="text-lg font-bold text-red-600 mb-4">Montant Dû Actuel: {formatAmount(currentPaymentModalBalanceDue)}</p>
 
@@ -975,14 +998,16 @@ export default function Factures() {
               <button
                 onClick={() => setShowPaymentModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isUpdatingPayment} // Désactiver pendant le chargement
               >
                 Annuler
               </button>
               <button
                 onClick={handleUpdatePayment}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                disabled={isUpdatingPayment}
               >
-                Mettre à Jour Paiement
+                {isUpdatingPayment ? 'Mise à Jour...' : 'Mettre à Jour Paiement'}
               </button>
             </div>
           </div>
@@ -1003,19 +1028,22 @@ export default function Factures() {
               className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
               rows="3"
               required
+              disabled={isCancellingInvoice} // Désactiver pendant le chargement
             ></textarea>
             <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowCancelModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isCancellingInvoice} // Désactiver pendant le chargement
               >
                 Annuler
               </button>
               <button
                 onClick={handleCancelInvoice}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                disabled={isCancellingInvoice}
               >
-                Confirmer Annulation
+                {isCancellingInvoice ? 'Annulation...' : 'Confirmer Annulation'}
               </button>
             </div>
           </div>
@@ -1041,6 +1069,7 @@ export default function Factures() {
                         setReturnAmount(item ? item.prix_unitaire_vente : '');
                     }}
                     value={selectedReturnItem ? selectedReturnItem.item_id : ''}
+                    disabled={isReturningItem} // Désactiver pendant le chargement
                 >
                     <option value="">-- Sélectionner un article --</option>
                     {currentVenteItems.map(item => (
@@ -1061,6 +1090,7 @@ export default function Factures() {
                         className="w-full border border-blue-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition"
                         rows="2"
                         required
+                        disabled={isReturningItem} // Désactiver pendant le chargement
                     ></textarea>
 
                     <label htmlFor="returnAmount" className="block text-sm font-medium text-gray-700 mb-1">Montant à rembourser:</label>
@@ -1074,6 +1104,7 @@ export default function Factures() {
                         min="0"
                         max={selectedReturnItem.prix_unitaire_vente}
                         required
+                        disabled={isReturningItem} // Désactiver pendant le chargement
                     />
                 </>
             )}
@@ -1082,15 +1113,16 @@ export default function Factures() {
               <button
                 onClick={() => { setShowReturnModal(false); setSelectedReturnItem(null); setReturnReason(''); setReturnAmount(''); setCurrentFactureDetails(null); }}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400 transition"
+                disabled={isReturningItem} // Désactiver pendant le chargement
               >
                 Annuler
               </button>
               <button
                 onClick={handleReturnItem}
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition"
-                disabled={!selectedReturnItem || !returnReason || isNaN(parseFloat(returnAmount))}
+                disabled={!selectedReturnItem || !returnReason || isNaN(parseFloat(returnAmount)) || isReturningItem}
               >
-                Confirmer Retour
+                {isReturningItem ? 'Retour en cours...' : 'Confirmer Retour'}
               </button>
             </div>
           </div>
