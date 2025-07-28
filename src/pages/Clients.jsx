@@ -15,18 +15,27 @@ export default function Clients() {
   const [form, setForm] = useState({ nom: '', telephone: '', adresse: '' });
   const [editingId, setEditingId] = useState(null);
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
-  // Cette variable est injectée par Vite et Render.
-  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
-  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  // --- NOUVEAU : Tableau des quartiers de Bamako pour l'autocomplétion ---
+  // Vous pouvez enrichir cette liste avec plus de quartiers et localités de Bamako.
+  const bamakoQuartiers = [
+    "Hamdallaye", "Hippodrome", "Badalabougou", "ACI 2000", "Missabougou",
+    "Sébénikoro", "Niamakoro", "Kalaban Coura", "Magnambougou", "Korofina",
+    "Djicoroni Para", "Gozing", "Boulkassoumbougou", "Dravéla", "Faladiè",
+    "Baco-Djicoroni", "Baco-Djicoroni ACI","Baco-Djicoroni GOLF","Yirimadio", "Souleymanebougou", "Sogoniko",
+    "Daoudabougou", "Titibougou", "Diallabougou", "Banankabougou", "Malitel Da", "Suguba",
+    "Niomirambougou", "Samé", "Sabougnidoum", "Dougourakoro", "Sirakoro",
+    "Djelibougou", "Point G", "Kati", // Kati est une ville proche, souvent incluse dans le contexte de Bamako
+    // Ajoutez d'autres quartiers de Bamako ici
+  ].sort(); // Trie par ordre alphabétique
+
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  // --- FIN NOUVEAU ---
+
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
 
   // Charger clients
   const fetchClients = () => {
-    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
     fetch(`${API_BASE_URL}/api/clients`)
-    // --- FIN DE LA MODIFICATION ---
       .then(res => res.json())
       .then(data => {
         setClients(data);
@@ -43,11 +52,9 @@ export default function Clients() {
     e.preventDefault();
 
     const method = editingId ? 'PUT' : 'POST';
-    // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
     const url = editingId
       ? `${API_BASE_URL}/api/clients/${editingId}`
       : `${API_BASE_URL}/api/clients`;
-    // --- FIN DE LA MODIFICATION ---
 
     const res = await fetch(url, {
       method,
@@ -60,14 +67,13 @@ export default function Clients() {
       setForm({ nom: '', telephone: '', adresse: '' });
       setEditingId(null);
       setShowForm(false);
+      setAddressSuggestions([]); // Réinitialise les suggestions après soumission
     }
   };
 
   const handleDelete = async (id) => {
     if (confirm('Confirmer la suppression ?')) {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'URL ---
       const res = await fetch(`${API_BASE_URL}/api/clients/${id}`, {
-      // --- FIN DE LA MODIFICATION ---
         method: 'DELETE',
       });
 
@@ -83,11 +89,33 @@ export default function Clients() {
     });
     setEditingId(client.id);
     setShowForm(true);
+    setAddressSuggestions([]); // Cache les suggestions lors de l'édition
   };
 
   const filteredClients = clients.filter((c) =>
     c.nom.toLowerCase().includes(search.toLowerCase())
   );
+
+  // --- NOUVEAU : Gère la saisie de l'adresse et les suggestions ---
+  const handleAddressChange = (e) => {
+    const value = e.target.value;
+    setForm({ ...form, adresse: value });
+
+    if (value.length > 0) {
+      const filteredSuggestions = bamakoQuartiers.filter(quartier =>
+        quartier.toLowerCase().includes(value.toLowerCase())
+      );
+      setAddressSuggestions(filteredSuggestions);
+    } else {
+      setAddressSuggestions([]);
+    }
+  };
+
+  const selectAddressSuggestion = (suggestion) => {
+    setForm({ ...form, adresse: suggestion });
+    setAddressSuggestions([]); // Cache les suggestions après sélection
+  };
+  // --- FIN NOUVEAU ---
 
   return (
     <div className="p-8 max-w-5xl mx-auto">
@@ -114,6 +142,7 @@ export default function Clients() {
           setShowForm(true);
           setForm({ nom: '', telephone: '', adresse: '' });
           setEditingId(null);
+          setAddressSuggestions([]); // Réinitialise les suggestions lors de l'ouverture
         }}
         className="mb-4 flex items-center px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition"
       >
@@ -135,20 +164,32 @@ export default function Clients() {
             required
             className="w-full border border-gray-300 rounded px-4 py-2"
           />
-          <input
-            type="text"
-            placeholder="Téléphone"
-            value={form.telephone}
-            onChange={(e) => setForm({ ...form, telephone: e.target.value })}
-            className="w-full border border-gray-300 rounded px-4 py-2"
-          />
-          <input
-            type="text"
-            placeholder="Adresse"
-            value={form.adresse}
-            onChange={(e) => setForm({ ...form, adresse: e.target.value })}
-            className="w-full border border-gray-300 rounded px-4 py-2"
-          />
+          {/* --- MODIFICATION ICI : Champ adresse avec autocomplétion --- */}
+          <div className="relative"> {/* Conteneur pour positionner les suggestions */}
+            <input
+              type="text"
+              placeholder="Adresse"
+              value={form.adresse}
+              onChange={handleAddressChange} // Utilise la nouvelle fonction
+              onBlur={() => setTimeout(() => setAddressSuggestions([]), 100)} // Cache les suggestions quand l'input perd le focus (avec délai pour permettre le clic)
+              className="w-full border border-gray-300 rounded px-4 py-2"
+            />
+            {addressSuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-b mt-1 max-h-48 overflow-y-auto shadow-lg">
+                {addressSuggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    onClick={() => selectAddressSuggestion(suggestion)}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                  >
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          {/* --- FIN MODIFICATION --- */}
+
           <div className="flex gap-2">
             <button
               type="submit"
@@ -162,6 +203,7 @@ export default function Clients() {
                 setShowForm(false);
                 setEditingId(null);
                 setForm({ nom: '', telephone: '', adresse: '' });
+                setAddressSuggestions([]); // Réinitialise les suggestions lors de l'annulation
               }}
               className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
             >
