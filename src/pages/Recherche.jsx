@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, CubeIcon } from '@heroicons/react/24/outline'; // Ajout de CubeIcon
+import { MagnifyingGlassIcon, XMarkIcon, CheckCircleIcon, XCircleIcon, CubeIcon } from '@heroicons/react/24/outline';
 
 export default function Recherche() {
   const [products, setProducts] = useState([]);
@@ -9,12 +9,8 @@ export default function Recherche() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // --- MODIFICATION ICI : Définition de l'URL de base du backend ---
-  // Cette variable est injectée par Vite et Render.
-  // Elle sera 'https://choco-backend-api.onrender.com' en production sur Render,
-  // et 'http://localhost:3001' en développement local (si vous avez configuré votre .env local).
+  // Définition de l'URL de base du backend
   const API_BASE_URL = import.meta.env.VITE_APP_BACKEND_URL;
-  // --- FIN DE LA MODIFICATION ---
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
@@ -30,14 +26,12 @@ export default function Recherche() {
     setFilteredProducts([]);
 
     try {
-      // --- MODIFICATION ICI : Utilisation de API_BASE_URL pour l'appel fetch ---
-      const response = await fetch(`${API_BASE_URL}/api/products`); 
-      // --- FIN DE LA MODIFICATION ---
+      const response = await fetch(`${API_BASE_URL}/api/products`);
       if (!response.ok) {
         throw new Error('Échec de la récupération des produits.');
       }
       const data = await response.json();
-      setProducts(data); // Stocke tous les produits
+      setProducts(data);
 
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       const results = data.filter(product => {
@@ -47,8 +41,9 @@ export default function Recherche() {
         const storageMatch = product.stockage?.toLowerCase().includes(lowerCaseSearchTerm);
         const typeMatch = product.type?.toLowerCase().includes(lowerCaseSearchTerm);
         const cartonTypeMatch = product.type_carton?.toLowerCase().includes(lowerCaseSearchTerm);
+        const fournisseurNomMatch = product.nom_fournisseur?.toLowerCase().includes(lowerCaseSearchTerm);
 
-        return brandMatch || modelMatch || imeiMatch || storageMatch || typeMatch || cartonTypeMatch;
+        return brandMatch || modelMatch || imeiMatch || storageMatch || typeMatch || cartonTypeMatch || fournisseurNomMatch;
       });
       setFilteredProducts(results);
 
@@ -69,8 +64,9 @@ export default function Recherche() {
 
   return (
     <div className="p-4 bg-white rounded-xl shadow-md">
-      <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-        <MagnifyingGlassIcon className="h-6 w-6 text-gray-600 mr-2" />
+      {/* On réduit la taille du titre sur mobile */}
+      <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+        <MagnifyingGlassIcon className="h-6 w-6 sm:h-7 sm:w-7 text-gray-600 mr-2" />
         Recherche de Produits
       </h3>
 
@@ -133,18 +129,20 @@ export default function Recherche() {
       {!loading && !error && hasSearched && filteredProducts.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+            // On ajuste le padding des cartes sur mobile
+            <div key={product.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border border-gray-200">
               <div className="flex items-center mb-4">
-                {/* Utilisation de CubeIcon comme icône générique de produit, similaire à l'icône de téléphone de l'image */}
                 <div className="bg-blue-100 p-2 rounded-full mr-3">
                   <CubeIcon className="h-6 w-6 text-blue-600" />
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900">
+                {/* On ajuste la taille du titre du produit sur mobile */}
+                <h4 className="text-lg sm:text-xl font-semibold text-gray-900">
                   {product.marque} {product.modele}
                 </h4>
               </div>
 
-              <div className="space-y-2 text-gray-700 text-sm">
+              {/* On ajuste la taille du texte des détails sur mobile */}
+              <div className="space-y-2 text-gray-700 text-xs sm:text-sm">
                 <p><strong>IMEI:</strong> {product.imei || 'N/A'}</p>
                 <p>
                   <strong>TYPE:</strong> {product.type || 'N/A'}
@@ -155,14 +153,13 @@ export default function Recherche() {
                 </p>
 
                 <p>
-                  <strong>Fournisseur:</strong> {product.nom_fournisseur || 'N/A'} (GO)
+                  <strong>Fournisseur:</strong> {product.nom_fournisseur || 'N/A'}
                 </p>
                 <p>
                   <strong>Date d'arrivée:</strong> {product.date_ajout ?
                     (() => {
                       try {
                         const date = new Date(product.date_ajout);
-                        // Format de date court comme dans l'image
                         return isNaN(date.getTime()) ? 'Invalide' : date.toLocaleDateString('fr-FR', {
                             year: 'numeric', month: 'short', day: 'numeric'
                         });
@@ -173,7 +170,7 @@ export default function Recherche() {
                     : 'N/A'}
                 </p>
                 <div className="flex items-center pt-2">
-                  {product.status === 'active' ? ( // Vérifie le statut du produit pour la disponibilité
+                  {product.status === 'active' ? (
                     <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                       <CheckCircleIcon className="h-4 w-4 mr-1" /> Disponible
                     </span>
