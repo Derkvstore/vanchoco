@@ -153,6 +153,10 @@ export default function Recherche() {
                 <p>
                   <strong>Stockage:</strong> {product.stockage || 'N/A'} (GO)
                 </p>
+
+                <p>
+                  <strong>Fournisseur:</strong> {product.nom_fournisseur || 'N/A'} (GO)
+                </p>
                 <p>
                   <strong>Date d'arrivée:</strong> {product.date_ajout ?
                     (() => {
