@@ -9,7 +9,11 @@ export default defineConfig({
       targets: [
         {
           src: 'public/_redirects',
-          dest: '.' // destination : dans dist/
+          dest: '.'
+        },
+        {
+          src: 'static.json', // Modification ici
+          dest: '.'
         }
       ]
     })

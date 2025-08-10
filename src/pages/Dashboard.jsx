@@ -1,4 +1,4 @@
-// frontend/src/components/Dashboard.jsx
+// frontend/src/pages/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,7 +19,9 @@ import {
   ArrowsRightLeftIcon,
   CurrencyDollarIcon, // Icône pour les bénéfices
   ListBulletIcon,
-  ClipboardDocumentListIcon // NOUVEL IMPORT : Icône pour les commandes spéciales
+  ClipboardDocumentListIcon, // NOUVEL IMPORT : Icône pour les commandes spéciales
+  MoonIcon, // NOUVEL IMPORT : Icône pour le mode sombre
+  SunIcon // NOUVEL IMPORT : Icône pour le mode clair
 } from '@heroicons/react/24/outline';
 
 // Importez vos composants de section ici avec les chemins corrects
@@ -38,6 +40,9 @@ import Factures from './Factures.jsx';
 import Benefices from '../pages/Benefices.jsx';
 import SpecialOrders from '../pages/SpecialOrders.jsx'; // NOUVEL IMPORT : Le composant des commandes spéciales
 
+// Import the logo image
+import logo from '../assets/logo.png'; // Adjust this path if your logo is elsewhere, e.g., '/logo.png' if in 'public'
+
 const sections = [
   { name: 'Produits', icon: CubeIcon },
   { name: 'Vente', icon: PlusCircleIcon },
@@ -51,15 +56,26 @@ const sections = [
   { name: 'Retour mobile', icon: ArrowLeftIcon },
   { name: 'Liste Fournisseurs', icon: TruckIcon },
   { name: 'Rtrs Fournisseur', icon: ArrowsRightLeftIcon },
-  { name: 'Achat', icon: ClipboardDocumentListIcon } // RENOMMÉ ET DÉPLACÉ EN DERNIER
+  //{ name: 'Achat', icon: ClipboardDocumentListIcon } // RENOMMÉ ET DÉPLACÉ EN DERNIER
 ];
 
 export default function Dashboard() {
-  const [active, setActive] = useState('Accueil');
+  // Initialisation de l'état 'active' en lisant depuis localStorage
+  const [active, setActive] = useState(() => {
+    const savedSection = localStorage.getItem('activeSection');
+    return savedSection || 'Accueil'; // Si rien n'est sauvegardé, par défaut 'Accueil'
+  });
   const [displayedName, setDisplayedName] = useState('');
+  // État pour le mode sombre, initialisé depuis localStorage ou les préférences système
+  const [isDarkMode, setIsDarkMode] = useState(
+    localStorage.getItem('theme') === 'dark' ||
+    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  );
+
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Logique pour le nom d'utilisateur
     const storedFullName = localStorage.getItem('fullName');
     const storedUsername = localStorage.getItem('username');
 
@@ -70,13 +86,28 @@ export default function Dashboard() {
     } else {
       navigate('/');
     }
-  }, [navigate]);
+
+    // Applique ou retire la classe 'dark' sur l'élément <html>
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [navigate, isDarkMode]); // Dépendance à isDarkMode pour réagir aux changements de thème
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('fullName');
     localStorage.removeItem('username');
+    localStorage.removeItem('activeSection'); // Nettoyer aussi la section active
+    localStorage.removeItem('theme'); // Nettoyer aussi le thème
     navigate('/');
+  };
+
+  // Fonction pour basculer le mode sombre
+  const toggleDarkMode = () => {
+    setIsDarkMode(prevMode => !prevMode); // Inverse l'état
+    localStorage.setItem('theme', isDarkMode ? 'light' : 'dark'); // Sauvegarde la préférence
   };
 
   const renderSection = () => {
@@ -92,7 +123,7 @@ export default function Dashboard() {
       case 'Recherche':
         return <Recherche />;
       case 'Factures':
-        return <Factures />;
+       return <Factures />;
       case 'Bénéfices':
         return <Benefices />;
       case 'Achat': // MIS À JOUR : Le cas doit correspondre au nouveau nom
@@ -115,20 +146,36 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-blue-50 text-blue-900 font-sans">
-      <header className="flex justify-between items-center bg-white shadow-md p-4 sticky top-0 z-10">
+    // Application des classes dark: pour le mode sombre sur le conteneur principal
+    <div className="flex flex-col min-h-screen bg-blue-50 text-blue-900 font-sans dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
+      <header className="flex justify-between items-center bg-white shadow-md p-4 sticky top-0 z-10 dark:bg-gray-800 dark:text-gray-100 transition-colors duration-300">
         <div className="flex items-center">
-          <h1 className="text-2xl font-semibold text-blue-700 mr-4">I STORE VAN CHOCO</h1>
+          <img src={logo} alt="NIANGADOU ELECTRO Logo" className="h-10 w-10 mr-2" />
+          <h1 className="text-2xl font-semibold text-blue-700 mr-4 dark:text-white transition-colors duration-300">ETS YATTASSAYE ELECTRONIQUE</h1>
         </div>
 
         {displayedName && (
           <div className="flex items-center space-x-4">
-            <p className="text-lg text-blue-800">
-              Bienvenue, <span className="font-bold">{displayedName}</span>
+            <p className="text-lg text-blue-800 dark:text-gray-200">
+              Bienvenue, <span className="font-bold">{displayedName}</span>!
             </p>
+            
+            {/* Bouton pour basculer le mode sombre */}
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg text-blue-700 hover:bg-blue-100 dark:text-gray-100 dark:hover:bg-gray-700 transition-colors"
+              title={isDarkMode ? "Passer en mode clair" : "Passer en mode sombre"}
+            >
+              {isDarkMode ? (
+                <SunIcon className="h-6 w-6" /> // Icône soleil en mode sombre
+              ) : (
+                <MoonIcon className="h-6 w-6" /> // Icône lune en mode clair
+              )}
+            </button>
+
             <button
               onClick={handleLogout}
-              className="flex items-center p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+              className="flex items-center p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors dark:bg-red-900 dark:text-white dark:hover:bg-red-800"
             >
               <ArrowRightOnRectangleIcon className="h-5 w-5 mr-2" />
               Se déconnecter
@@ -138,15 +185,18 @@ export default function Dashboard() {
       </header>
 
       <div className="flex flex-grow">
-        <nav className="w-64 bg-white shadow-lg flex flex-col p-6">
+        <nav className="w-64 bg-white shadow-lg flex flex-col p-6 dark:bg-gray-800 dark:text-gray-100 transition-colors duration-300">
           <ul className="flex flex-col space-y-4">
             <li>
               <button
-                onClick={() => setActive('Accueil')}
+                onClick={() => {
+                  setActive('Accueil');
+                  localStorage.setItem('activeSection', 'Accueil'); // Sauvegarde la section
+                }}
                 className={`flex items-center w-full p-3 rounded-lg transition-colors
                   ${active === 'Accueil'
-                    ? 'bg-blue-200 text-blue-900 font-semibold shadow'
-                    : 'text-blue-700 hover:bg-blue-100'
+                    ? 'bg-blue-200 text-blue-900 font-semibold shadow dark:bg-blue-800 dark:text-white'
+                    : 'text-blue-700 hover:bg-blue-100 dark:text-gray-300 dark:hover:bg-gray-700'
                   }`}
               >
                 <HomeIcon className="h-6 w-6 mr-3" />
@@ -156,11 +206,14 @@ export default function Dashboard() {
             {sections.map(({ name, icon: Icon }) => (
               <li key={name}>
                 <button
-                  onClick={() => setActive(name)}
+                  onClick={() => {
+                    setActive(name);
+                    localStorage.setItem('activeSection', name); // Sauvegarde la section
+                  }}
                   className={`flex items-center w-full p-3 rounded-lg transition-colors
                     ${active === name
-                      ? 'bg-blue-200 text-blue-900 font-semibold shadow'
-                      : 'text-blue-700 hover:bg-blue-100'
+                      ? 'bg-blue-200 text-blue-900 font-semibold shadow dark:bg-blue-800 dark:text-white'
+                      : 'text-blue-700 hover:bg-blue-100 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                 >
                   <Icon className="h-6 w-6 mr-3" />
@@ -172,8 +225,10 @@ export default function Dashboard() {
         </nav>
 
         <main className="flex-grow p-10">
-          <h2 className="text-3xl font-bold mb-6 text-gray-800">{active}</h2>
-          <div className="bg-white rounded-xl shadow p-6 min-h-[400px]">
+          <h2 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-200">
+            {active}
+          </h2>
+          <div className="bg-white rounded-xl shadow p-6 min-h-[400px] dark:bg-gray-700 dark:text-gray-100">
             {renderSection()}
           </div>
         </main>
